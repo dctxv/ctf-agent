@@ -1,0 +1,10 @@
+{
+  "engagement_name": "juice-shop-first-contact",
+  "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+  "allowed_hosts": ["host.docker.internal", "localhost", "127.0.0.1"],
+  "goal": "Recon the app, then find and demonstrate 3 distinct vulnerabilities with working PoCs saved as files. Explain each briefly.",
+  "max_steps": 40,
+  "max_cost_usd": 1.0,
+  "cmd_timeout_s": 180,
+  "workspace": "C:/projects/ctf-agent/workspace"
+}
