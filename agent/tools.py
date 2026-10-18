@@ -121,9 +121,15 @@ def web_search(query: str) -> str:
     if not key:
         return "web_search unavailable: set TAVILY_API_KEY in .env"
     try:
-        r = requests.post("https://api.tavily.com/search", json={
-            "api_key": key, "query": query, "max_results": 5, "search_depth": "basic"
-        }, timeout=30)
+        r = requests.post("https://api.tavily.com/search",
+            headers={"Authorization": f"Bearer {key}"},
+            json={"query": query, "max_results": 5, "search_depth": "basic"},
+            timeout=30)
+        # Surface auth/quota/server failures instead of masking them as "No results".
+        # A 401 here almost always means TAVILY_API_KEY is bad/expired.
+        if r.status_code != 200:
+            body = r.text.strip().replace("\n", " ")[:200]
+            return f"web_search error: HTTP {r.status_code} {body}"
         results = r.json().get("results", [])
         if not results:
             return "No results found."

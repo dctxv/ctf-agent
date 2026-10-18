@@ -28,6 +28,23 @@ def _deepseek_ok():
 check("DeepSeek key valid + balance", _deepseek_ok),
 
 
+def _tavily_ok():
+    key = os.getenv("TAVILY_API_KEY", "")
+    if not key:
+        return False, "set TAVILY_API_KEY in .env (web_search is disabled without it)"
+    r = requests.post("https://api.tavily.com/search",
+                      headers={"Authorization": f"Bearer {key}"},
+                      json={"query": "tavily preflight check", "max_results": 1,
+                            "search_depth": "basic"},
+                      timeout=15)
+    if r.status_code != 200:
+        return False, f"HTTP {r.status_code} - key likely invalid/expired: {r.text[:100]}"
+    results = r.json().get("results", [])
+    if not results:
+        return False, "HTTP 200 but no results - unexpected API response"
+    return True, f"{len(results)} result(s)"
+
+
 def sh(cmd):
     return subprocess.run(cmd, capture_output=True, timeout=60,
                          encoding="utf-8", errors="replace")
@@ -45,7 +62,6 @@ results = [
     check("DeepSeek reachability target", lambda: (os.getenv("DEEPSEEK_API_KEY","").startswith("sk"), "set DEEPSEEK_API_KEY")),
     check("Juice Shop target up", lambda: (requests.get("http://localhost:3000", timeout=5).status_code == 200,
         "docker run --rm -d -p 3000:3000 --name juice bkimminich/juice-shop")),
-    check("Tavily key (web_search)", lambda: (bool(os.getenv("TAVILY_API_KEY")),
-        "optional - without it web_search is disabled")),
+    check("Tavily key valid (web_search)", _tavily_ok),
 ]
 sys.exit(0 if all(results) else 1)

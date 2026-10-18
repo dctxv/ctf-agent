@@ -81,7 +81,7 @@ Python orchestrator  ──── API ───▶         nmap · sqlmap · ffu
 | **No learning outputs** | The writeup/flashcard generation (the student-differentiator feature) is Phase 3 - designed, not built. |
 | **No dashboard/UI** | Phase 4. Console-only today. The event-emitter architecture exists precisely so this is additive, not a rewrite. |
 | **Single-user, single-agent** | No concurrency, no multi-agent. Right for a solo operator; not an aim yet. |
-| **`web_search` proven in runs? No** | Tavily key is set and wired; Juice Shop is so well-known the model never needed it. First eval with hard challenges will likely exercise it for the first time. |
+| **`web_search` exercised but non-functional** | The 3× baseline hit it 23 times (c08/c10), but every call failed: Tavily returns HTTP 401 and the old code swallowed non-200 responses as "No results found", so the model never saw real web data. Code now surfaces HTTP errors and preflight fails on a bad key; the Tavily key in `.env` still needs replacing before it returns results. |
 
 **Hardware context:** the operator's PC (Ryzen 5 5600, RTX 5060 Ti 16GB, 16GB DDR4) runs the API-first stack easily *because* inference is remote. The Phase-5 local model swap (Qwen3-Coder-30B-A3B, fits 16GB VRAM) is validated on paper but untested here - and 16GB system RAM is the constraint to watch.
 

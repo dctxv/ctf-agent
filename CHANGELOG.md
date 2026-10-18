@@ -3,6 +3,15 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Fixed `web_search` silently masking failures: it POSTed to Tavily with no HTTP
+  status check, so an auth failure collapsed to "No results found." The 3× baseline
+  made 23 web_search calls (c08/c10) that all failed this way — Tavily returns HTTP
+  401. It now switches to the current `Authorization: Bearer <key>` auth form and
+  surfaces non-200 responses as `web_search error: HTTP <code> ...`. Preflight's
+  Tavily check now does a real 1-result search and PASSes only on HTTP 200 with a
+  non-empty results array, so a bad/expired key fails preflight. NOTE: the
+  `TAVILY_API_KEY` in `.env` currently returns 401 and must be regenerated before
+  web_search returns results.
 - Eval harness (`run_eval.py`): 10 fixed challenges, N runs each, content-asserted
   evidence (a non-empty file must also satisfy the challenge's `contains`/`matches`
   assertion, so a "could not do it" file can never score), target pinned by digest,
