@@ -1,0 +1,18 @@
+{
+  "engagement_name": "c10-announcement-decrypt",
+  "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+  "allowed_hosts": [
+    "host.docker.internal",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "goal": "announcement_encrypted.md is exposed via /ftp. Obtain it, decrypt it, and save the plaintext's final famous line to /workspace/evidence/c10_plaintext.txt",
+  "evidence": {
+    "type": "file_exists",
+    "path": "evidence/c10_plaintext.txt"
+  },
+  "max_steps": 40,
+  "max_cost_usd": 0.4,
+  "cmd_timeout_s": 120,
+  "workspace": "C:/projects/ctf-agent/workspace"
+}

@@ -1,0 +1,18 @@
+{
+  "engagement_name": "c08-kdbx-crack",
+  "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+  "allowed_hosts": [
+    "host.docker.internal",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "goal": "A KeePass database (incident-support.kdbx) is exposed via /ftp. Retrieve it, get inside it, and save the secret it protects to /workspace/evidence/c8_kdbx_secret.txt",
+  "evidence": {
+    "type": "file_exists",
+    "path": "evidence/c8_kdbx_secret.txt"
+  },
+  "max_steps": 35,
+  "max_cost_usd": 0.35,
+  "cmd_timeout_s": 120,
+  "workspace": "C:/projects/ctf-agent/workspace"
+}

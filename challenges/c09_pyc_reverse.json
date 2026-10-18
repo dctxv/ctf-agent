@@ -1,0 +1,18 @@
+{
+  "engagement_name": "c09-pyc-reverse",
+  "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+  "allowed_hosts": [
+    "host.docker.internal",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "goal": "encrypt.pyc is exposed via /ftp. Retrieve, decompile or disassemble it, and explain in your own words what it does; save to /workspace/evidence/c9_pyc_analysis.md",
+  "evidence": {
+    "type": "file_exists",
+    "path": "evidence/c9_pyc_analysis.md"
+  },
+  "max_steps": 35,
+  "max_cost_usd": 0.35,
+  "cmd_timeout_s": 120,
+  "workspace": "C:/projects/ctf-agent/workspace"
+}

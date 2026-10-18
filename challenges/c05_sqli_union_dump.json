@@ -1,0 +1,19 @@
+{
+  "engagement_name": "c05-sqli-union-dump",
+  "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+  "allowed_hosts": [
+    "host.docker.internal",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "goal": "Use UNION-based SQL injection to exfiltrate the full Users table. Save the first 10 rows (email + role) to /workspace/evidence/c5_users.txt",
+  "evidence": {
+    "type": "file_exists",
+    "path": "evidence/c5_users.txt",
+    "contains": "admin@juice-sh.op"
+  },
+  "max_steps": 30,
+  "max_cost_usd": 0.25,
+  "cmd_timeout_s": 120,
+  "workspace": "C:/projects/ctf-agent/workspace"
+}

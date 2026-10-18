@@ -1,0 +1,18 @@
+{
+  "engagement_name": "c06-error-disclosure",
+  "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+  "allowed_hosts": [
+    "host.docker.internal",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "goal": "Make the application disclose an internal error/stack trace or error detail an attacker shouldn't see. Save the evidence (the error text + what caused it) to /workspace/evidence/c6_error.txt",
+  "evidence": {
+    "type": "file_exists",
+    "path": "evidence/c6_error.txt"
+  },
+  "max_steps": 25,
+  "max_cost_usd": 0.25,
+  "cmd_timeout_s": 120,
+  "workspace": "C:/projects/ctf-agent/workspace"
+}

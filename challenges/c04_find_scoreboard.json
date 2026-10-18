@@ -1,0 +1,19 @@
+{
+  "engagement_name": "c04-find-scoreboard",
+  "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+  "allowed_hosts": [
+    "host.docker.internal",
+    "localhost",
+    "127.0.0.1"
+  ],
+  "goal": "Somewhere on this app is a hidden 'score board' page not linked from the UI. Discover its exact URL and save it to /workspace/evidence/c4_scoreboard_url.txt",
+  "evidence": {
+    "type": "file_exists",
+    "path": "evidence/c4_scoreboard_url.txt",
+    "contains": "score-board"
+  },
+  "max_steps": 25,
+  "max_cost_usd": 0.25,
+  "cmd_timeout_s": 120,
+  "workspace": "C:/projects/ctf-agent/workspace"
+}

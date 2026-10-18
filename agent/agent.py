@@ -51,9 +51,10 @@ RULES:
 class AgentSession:
     """Event-emitting agent loop. The future dashboard subscribes to these events."""
 
-    def __init__(self, engagement: dict, human_input_fn):
+    def __init__(self, engagement: dict, human_input_fn, run_index: int | None = None):
         self.engagement = engagement
         self.human_input_fn = human_input_fn
+        self.run_index = run_index
         self.client = OpenAI(api_key=os.environ["DEEPSEEK_API_KEY"],
                              base_url="https://api.deepseek.com")
         self.messages = []          # append-only (keeps prompt-prefix cache hits)
@@ -187,6 +188,8 @@ class AgentSession:
     def _save_artifacts(self):
         name = self.engagement["engagement_name"].replace(" ", "_")
         out = Path(self.engagement.get("workspace", ".")) / "sessions" / name
+        if self.run_index is not None:            # keep each eval run separate
+            out = out / f"run_{self.run_index:02d}"
         out.mkdir(parents=True, exist_ok=True)
         (out / "transcript.json").write_text(json.dumps(self.messages, indent=2, default=str),
                                              encoding="utf-8")
