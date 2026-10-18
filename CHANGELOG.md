@@ -11,9 +11,16 @@ All notable changes to the AI CTF & Pentest Copilot.
 - First 3x baseline recorded at git `a3d3e74`: 9/10 challenges solved on every run
   (27/30 runs), 0 crashes, $1.05 total, ~55 min. Escalation tier fired in real runs
   for the first time (c07, c09, c10); `ask_human` fired once (c10). c08 (KeePass
-  crack) is an expected failure: the toolbox image ships no john/keepass2john/hashcat,
-  so the agent exhausts its 35-step budget on all three runs. Logged as a tool gap,
-  not a regression.
+  crack) is an expected failure, but not for the reason first assumed: the agent
+  extracts the hash and runs john/hashcat against rockyou to exhaustion on all three
+  runs because the master password is not in the wordlist. A wordlist/knowledge gap,
+  not a tool gap.
+- Toolbox image (`Dockerfile`) reconciled with the container the baseline actually
+  ran on: added john, hashcat, wordlists, OpenCL (ocl-icd + pocl), gcc and dev
+  headers via apt, and pykeepass/pycryptodomex/uncompyle6/decompyle3/pyotp via pip,
+  and decompress rockyou at build time. The committed image now reproduces the
+  baseline environment; previously these were hand-installed in the running
+  container only.
 
 ## [1.2] - 2026-10-17
 - UTF-8 end-to-end subprocess decode (eliminates the cp1252 crash class)
