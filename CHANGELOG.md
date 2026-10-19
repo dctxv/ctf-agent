@@ -11,7 +11,12 @@ All notable changes to the AI CTF & Pentest Copilot.
   Tavily check now does a real 1-result search and PASSes only on HTTP 200 with a
   non-empty results array, so a bad/expired key fails preflight. The
   `TAVILY_API_KEY` in `.env` has since been replaced; web_search now returns real
-  results and preflight's Tavily check PASSes.
+  results and preflight's Tavily check PASSes. Re-evaluated at git `0d0f571` (same
+  3× suite): web_search fired 12 times across c08/c10 with zero errors and real
+  writeup content (fix verified live), but outcomes were identical to the a3d3e74
+  baseline (9/10 challenges, 27/30 runs; c08 still 0/3, c10 still 3/3) — working
+  web_search is outcome-neutral on this suite, and c08 remains a wordlist gap, not a
+  discovery gap. (New rows appended to `results.csv` under sha `0d0f571`.)
 - Eval harness (`run_eval.py`): 10 fixed challenges, N runs each, content-asserted
   evidence (a non-empty file must also satisfy the challenge's `contains`/`matches`
   assertion, so a "could not do it" file can never score), target pinned by digest,
