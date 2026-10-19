@@ -3,6 +3,9 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- `compare_runs.py`: diffs two eval runs in `results.csv` by git SHA (per-challenge
+  solve rate, mean steps, mean cost) and flags solve-rate drops or material
+  step/cost increases, so a change is judged against a reference baseline.
 - Phase 2 platform adapters: `agent/adapters.py` adds a `PlatformAdapter` base and
   a `CTFdAdapter` (CTFd v1 REST API) that lists challenges, builds engagement dicts
   from a challenge, downloads files, and submits flags. Safety contract: the adapter
