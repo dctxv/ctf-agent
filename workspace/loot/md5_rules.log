@@ -1,5 +1,0 @@
-Using default input encoding: UTF-8
-Loaded 24 password hashes with no different salts (Raw-MD5 [MD5 256/256 AVX2 8x3])
-Remaining 20 password hashes with no different salts
-Warning: no OpenMP support for this hash type, consider --fork=12
-No "/usr/share/hashcat/rules/best66.rule" mode rules found in /etc/john/john.conf

@@ -6,3 +6,6 @@
 # Python caches
 __pycache__/
 *.pyc
+
+# Runtime artifacts (shared Docker volume: evidence, loot, sessions, pocs)
+/workspace/

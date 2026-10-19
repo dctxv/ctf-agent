@@ -1,9 +1,0 @@
-[1] GET http://host.docker.internal:3000/ftp/announcement_encrypted.md -> 200, 369237 bytes, md5=034a8cabcaab13796222fa9b327f097b
-    1194 RSA blocks
-[2] GET http://host.docker.internal:3000/ftp/encrypt.pyc%2500.md -> 200, 573 bytes, sha256=b66ff06365eb5a36...
-    valid Python 2.7 bytecode, trusted modulus match: True
-[3] codebook entries: 256 (expect 256, no collisions)
-    recovered 1194 chars, 0 non-printable
-[4] BYTE-FOR-BYTE VERIFIED: re-encrypted all 1194 blocks match ciphertext
-[5] plaintext lines: 7; final non-empty line: 'URL: /#/tokensale-ico-ea'
-[6] wrote /workspace/evidence/c10_plaintext.txt

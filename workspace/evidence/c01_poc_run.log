@@ -1,6 +1,0 @@
-[*] Target: http://host.docker.internal:3000
-[*] GET /rest/admin/application-version
-[*] HTTP status: 200
-[*] Body: {"version":"20.3.0"}
-[+] UNAUTHENTICATED VERSION DISCLOSURE: 20.3.0
-[+] Retrieved via GET http://host.docker.internal:3000/rest/admin/application-version (no credentials sent)

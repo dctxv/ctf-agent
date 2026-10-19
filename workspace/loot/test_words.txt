@@ -1,4 +1,0 @@
-foo
-bar
-TestPass123
-TestPass123!

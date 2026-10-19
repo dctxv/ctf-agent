@@ -1,9 +1,0 @@
-Using default input encoding: UTF-8
-Loaded 1 password hash (KeePass [SHA256 AES 32/64])
-Cost 1 (iteration count) is 1 for all loaded hashes
-Cost 2 (version) is 2 for all loaded hashes
-Cost 3 (algorithm [0=AES 1=TwoFish 2=ChaCha]) is 0 for all loaded hashes
-Will run 12 OpenMP threads
-Press Ctrl-C to abort, or send SIGUSR1 to john process for status
-Wait...0g 0:00:11:20 8.37% (ETA: 08:46:21) 0g/s 108723p/s 108723c/s 108723C/s dariln1..darika0411
-Session aborted
