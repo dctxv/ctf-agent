@@ -1,0 +1,11 @@
+[+] GET /ftp/announcement_encrypted.md -> HTTP 200, 369237 bytes -> /workspace/c10b/announcement_encrypted.md
+[+] GET /ftp/encrypt.pyc%2500.md -> HTTP 200, 573 bytes -> /workspace/c10b/encrypt.pyc
+[*] 1194 RSA ciphertext blocks
+[*] distinct ciphertexts: 43 (unmapped: 0)
+[+] plaintext (1194 chars) -> /workspace/c10b/announcement_plaintext.md
+[-] first 3 lines:
+    Major Announcement:
+    Token Sale - Initial Coin Offering
+    Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Give us all your money. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero eros et accumsan et iusto odio dignissim qui blandit praes
+[+] FINAL LINE: 'URL: /#/tokensale-ico-ea'
+[+] saved final line -> /workspace/evidence/c10_plaintext.txt

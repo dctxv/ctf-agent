@@ -1,0 +1,21 @@
+admin
+password
+Password123
+incident
+incident-support
+keepass
+master
+support
+juice-shop
+juiceshop
+owasp
+OWASP Juice Shop
+security
+slurmCl4ssic
+attack
+attack!
+changeme
+123456
+c8
+kdbx
+ftp

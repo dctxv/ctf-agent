@@ -1,0 +1,297 @@
+==============================================================================
+[VECTOR 1] POST http://host.docker.internal:3000/rest/user/login
+CAUSE        : Malformed JSON body: truncated object (body-parser JSON.parse throws)
+BODY         : {"email":
+REQ HEADERS  : Content-Type: application/json
+RESP STATUS  : HTTP 500
+RESP HEADER  : Content-Type: text/html; charset=utf-8
+RESP HEADER  : X-Content-Type-Options: nosniff
+RESP HEADER  : X-Frame-Options: SAMEORIGIN
+------------------------------------------------------------------------------
+<html>
+  <head>
+    <meta charset='utf-8'> 
+    <title>SyntaxError: Unexpected end of JSON input</title>
+    <style>* {
+  margin: 0;
+  padding: 0;
+  outline: 0;
+}
+
+body {
+  padding: 80px 100px;
+  font: 13px "Helvetica Neue", "Lucida Grande", "Arial";
+  background: #ECE9E9 -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#ECE9E9));
+  background: #ECE9E9 -moz-linear-gradient(top, #fff, #ECE9E9);
+  background-repeat: no-repeat;
+  color: #555;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 {
+  font-size: 22px;
+  color: #343434;
+}
+h1 em, h2 em {
+  padding: 0 5px;
+  font-weight: normal;
+}
+h1 {
+  font-size: 60px;
+}
+h2 {
+  margin-top: 10px;
+}
+ul li {
+  list-style: none;
+}
+#stacktrace {
+  margin-left: 60px;
+}
+</style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <h1>OWASP Juice Shop (Express ^4.22.1)</h1>
+      <h2><em>500</em> SyntaxError: Unexpected end of JSON input</h2>
+      <ul id="stacktrace"><li> &nbsp; &nbsp;at JSON.parse (&lt;anonymous&gt;)</li><li> &nbsp; &nbsp;at jsonParser (/juice-shop/build/server.js:357:33)</li><li> &nbsp; &nbsp;at Layer.handle [as handle_request] (/juice-shop/node_modules/express/lib/router/layer.js:95:5)</li><li> &nbsp; &nbsp;at trim_prefix (/juice-shop/node_modules/express/lib/router/index.js:328:13)</li><li> &nbsp; &nbsp;at /juice-shop/node_modules/express/lib/router/index.js:286:9</li><li> &nbsp; &nbsp;at router.process_params (/juice-shop/node_modules/express/lib/router/index.js:346:12)</li><li> &nbsp; &nbsp;at next (/juice-shop/node_modules/express/lib/router/index.js:280:10)</li><li> &nbsp; &nbsp;at /juice-shop/node_modules/body-parser/lib/read.js:137:5</li><li> &nbsp; &nbsp;at AsyncResource.runInAsyncScope (node:async_hooks:227:14)</li><li> &nbsp; &nbsp;at invokeCallback (/juice-shop/node_modules/raw-body/index.js:238:16)</li><li> &nbsp; &nbsp;at done (/juice-shop/node_modules/raw-body/index.js:227:7)</li><li> &nbsp; &nbsp;at IncomingMessage.onEnd (/juice-shop/node_modules/raw-body/index.js:287:7)</li><li> &nbsp; &nbsp;at IncomingMessage.emit (node:events:514:28)</li><li> &nbsp; &nbsp;at endReadableNT (node:internal/streams/readable:1764:12)</li><li> &nbsp; &nbsp;at process.processTicksAndRejections (node:internal/process/task_queues:90:21)</li></ul>
+    </div>
+  </body>
+</html>
+
+==============================================================================
+[VECTOR 2] GET http://host.docker.internal:3000/rest/products/search?q=%27--
+CAUSE        : SQL metacharacters in the search term break the generated SQLite query
+REQ HEADERS  : Content-Type: (none)
+RESP STATUS  : HTTP 500
+RESP HEADER  : Content-Type: text/html; charset=utf-8
+RESP HEADER  : X-Content-Type-Options: nosniff
+RESP HEADER  : X-Frame-Options: SAMEORIGIN
+------------------------------------------------------------------------------
+<html>
+  <head>
+    <meta charset='utf-8'> 
+    <title>Error: SQLITE_ERROR: incomplete input</title>
+    <style>* {
+  margin: 0;
+  padding: 0;
+  outline: 0;
+}
+
+body {
+  padding: 80px 100px;
+  font: 13px "Helvetica Neue", "Lucida Grande", "Arial";
+  background: #ECE9E9 -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#ECE9E9));
+  background: #ECE9E9 -moz-linear-gradient(top, #fff, #ECE9E9);
+  background-repeat: no-repeat;
+  color: #555;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 {
+  font-size: 22px;
+  color: #343434;
+}
+h1 em, h2 em {
+  padding: 0 5px;
+  font-weight: normal;
+}
+h1 {
+  font-size: 60px;
+}
+h2 {
+  margin-top: 10px;
+}
+ul li {
+  list-style: none;
+}
+#stacktrace {
+  margin-left: 60px;
+}
+</style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <h1>OWASP Juice Shop (Express ^4.22.1)</h1>
+      <h2><em>500</em> Error: SQLITE_ERROR: incomplete input</h2>
+      <ul id="stacktrace"></ul>
+    </div>
+  </body>
+</html>
+
+==============================================================================
+[VECTOR 3] GET http://host.docker.internal:3000/rest/products/search?q=apple%27
+CAUSE        : Single quote in search term -> unterminated SQL string literal
+REQ HEADERS  : Content-Type: (none)
+RESP STATUS  : HTTP 500
+RESP HEADER  : Content-Type: text/html; charset=utf-8
+RESP HEADER  : X-Content-Type-Options: nosniff
+RESP HEADER  : X-Frame-Options: SAMEORIGIN
+------------------------------------------------------------------------------
+<html>
+  <head>
+    <meta charset='utf-8'> 
+    <title>Error: SQLITE_ERROR: near &quot;&#39;%&#39;&quot;: syntax error</title>
+    <style>* {
+  margin: 0;
+  padding: 0;
+  outline: 0;
+}
+
+body {
+  padding: 80px 100px;
+  font: 13px "Helvetica Neue", "Lucida Grande", "Arial";
+  background: #ECE9E9 -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#ECE9E9));
+  background: #ECE9E9 -moz-linear-gradient(top, #fff, #ECE9E9);
+  background-repeat: no-repeat;
+  color: #555;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 {
+  font-size: 22px;
+  color: #343434;
+}
+h1 em, h2 em {
+  padding: 0 5px;
+  font-weight: normal;
+}
+h1 {
+  font-size: 60px;
+}
+h2 {
+  margin-top: 10px;
+}
+ul li {
+  list-style: none;
+}
+#stacktrace {
+  margin-left: 60px;
+}
+</style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <h1>OWASP Juice Shop (Express ^4.22.1)</h1>
+      <h2><em>500</em> Error: SQLITE_ERROR: near &quot;&#39;%&#39;&quot;: syntax error</h2>
+      <ul id="stacktrace"></ul>
+    </div>
+  </body>
+</html>
+
+==============================================================================
+[VECTOR 4] POST http://host.docker.internal:3000/api/Feedbacks
+CAUSE        : Empty object: required ORM field (captchaId) resolves to undefined
+BODY         : {}
+REQ HEADERS  : Content-Type: application/json
+RESP STATUS  : HTTP 500
+RESP HEADER  : Content-Type: text/html; charset=utf-8
+RESP HEADER  : X-Content-Type-Options: nosniff
+RESP HEADER  : X-Frame-Options: SAMEORIGIN
+------------------------------------------------------------------------------
+<html>
+  <head>
+    <meta charset='utf-8'> 
+    <title>Error: WHERE parameter &quot;captchaId&quot; has invalid &quot;undefined&quot; value</title>
+    <style>* {
+  margin: 0;
+  padding: 0;
+  outline: 0;
+}
+
+body {
+  padding: 80px 100px;
+  font: 13px "Helvetica Neue", "Lucida Grande", "Arial";
+  background: #ECE9E9 -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#ECE9E9));
+  background: #ECE9E9 -moz-linear-gradient(top, #fff, #ECE9E9);
+  background-repeat: no-repeat;
+  color: #555;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 {
+  font-size: 22px;
+  color: #343434;
+}
+h1 em, h2 em {
+  padding: 0 5px;
+  font-weight: normal;
+}
+h1 {
+  font-size: 60px;
+}
+h2 {
+  margin-top: 10px;
+}
+ul li {
+  list-style: none;
+}
+#stacktrace {
+  margin-left: 60px;
+}
+</style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <h1>OWASP Juice Shop (Express ^4.22.1)</h1>
+      <h2><em>500</em> Error: WHERE parameter &quot;captchaId&quot; has invalid &quot;undefined&quot; value</h2>
+      <ul id="stacktrace"><li> &nbsp; &nbsp;at SQLiteQueryGenerator.whereItemQuery (/juice-shop/node_modules/sequelize/lib/dialects/abstract/query-generator.js:1770:13)</li><li> &nbsp; &nbsp;at /juice-shop/node_modules/sequelize/lib/dialects/abstract/query-generator.js:1761:25</li><li> &nbsp; &nbsp;at Array.forEach (&lt;anonymous&gt;)</li><li> &nbsp; &nbsp;at SQLiteQueryGenerator.whereItemsQuery (/juice-shop/node_modules/sequelize/lib/dialects/abstract/query-generator.js:1759:35)</li><li> &nbsp; &nbsp;at SQLiteQueryGenerator.getWhereConditions (/juice-shop/node_modules/sequelize/lib/dialects/abstract/query-generator.js:2108:19)</li><li> &nbsp; &nbsp;at SQLiteQueryGenerator.selectQuery (/juice-shop/node_modules/sequelize/lib/dialects/abstract/query-generator.js:1015:28)</li><li> &nbsp; &nbsp;at SQLiteQueryInterface.select (/juice-shop/node_modules/sequelize/lib/dialects/abstract/query-interface.js:407:59)</li><li> &nbsp; &nbsp;at Captcha.findAll (/juice-shop/node_modules/sequelize/lib/model.js:1140:47)</li><li> &nbsp; &nbsp;at process.processTicksAndRejections (node:internal/process/task_queues:104:5)</li><li> &nbsp; &nbsp;at async Captcha.findOne (/juice-shop/node_modules/sequelize/lib/model.js:1240:12)</li><li> &nbsp; &nbsp;at async /juice-shop/build/routes/captcha.js:33:25</li></ul>
+    </div>
+  </body>
+</html>
+
+==============================================================================
+[VECTOR 5] POST http://host.docker.internal:3000/dataerasure
+CAUSE        : Empty object hits the data-erasure route's internal guard, which throws with the caller's IP address embedded in the message
+BODY         : {}
+REQ HEADERS  : Content-Type: application/json
+RESP STATUS  : HTTP 500
+RESP HEADER  : Content-Type: text/html; charset=utf-8
+RESP HEADER  : X-Content-Type-Options: nosniff
+RESP HEADER  : X-Frame-Options: SAMEORIGIN
+------------------------------------------------------------------------------
+<html>
+  <head>
+    <meta charset='utf-8'> 
+    <title>Error: Blocked illegal activity by ::ffff:172.17.0.1</title>
+    <style>* {
+  margin: 0;
+  padding: 0;
+  outline: 0;
+}
+
+body {
+  padding: 80px 100px;
+  font: 13px "Helvetica Neue", "Lucida Grande", "Arial";
+  background: #ECE9E9 -webkit-gradient(linear, 0% 0%, 0% 100%, from(#fff), to(#ECE9E9));
+  background: #ECE9E9 -moz-linear-gradient(top, #fff, #ECE9E9);
+  background-repeat: no-repeat;
+  color: #555;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2 {
+  font-size: 22px;
+  color: #343434;
+}
+h1 em, h2 em {
+  padding: 0 5px;
+  font-weight: normal;
+}
+h1 {
+  font-size: 60px;
+}
+h2 {
+  margin-top: 10px;
+}
+ul li {
+  list-style: none;
+}
+#stacktrace {
+  margin-left: 60px;
+}
+</style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <h1>OWASP Juice Shop (Express ^4.22.1)</h1>
+      <h2><em>500</em> Error: Blocked illegal activity by ::ffff:172.17.0.1</h2>
+      <ul id="stacktrace"><li> &nbsp; &nbsp;at /juice-shop/build/routes/dataErasure.js:104:18</li><li> &nbsp; &nbsp;at /juice-shop/build/routes/dataErasure.js:157:7</li><li> &nbsp; &nbsp;at Layer.handle [as handle_request] (/juice-shop/node_modules/express/lib/router/layer.js:95:5)</li><li> &nbsp; &nbsp;at next (/juice-shop/node_modules/express/lib/router/route.js:149:13)</li><li> &nbsp; &nbsp;at Route.dispatch (/juice-shop/node_modules/express/lib/router/route.js:119:3)</li><li> &nbsp; &nbsp;at Layer.handle [as handle_request] (/juice-shop/node_modules/express/lib/router/layer.js:95:5)</li><li> &nbsp; &nbsp;at /juice-shop/node_modules/express/lib/router/index.js:284:15</li><li> &nbsp; &nbsp;at router.process_params (/juice-shop/node_modules/express/lib/router/index.js:346:12)</li><li> &nbsp; &nbsp;at next (/juice-shop/node_modules/express/lib/router/index.js:280:10)</li><li> &nbsp; &nbsp;at router.handle (/juice-shop/node_modules/express/lib/router/index.js:175:3)</li><li> &nbsp; &nbsp;at router (/juice-shop/node_modules/express/lib/router/index.js:47:12)</li><li> &nbsp; &nbsp;at Layer.handle [as handle_request] (/juice-shop/node_modules/express/lib/router/layer.js:95:5)</li><li> &nbsp; &nbsp;at trim_prefix (/juice-shop/node_modules/express/lib/router/index.js:328:13)</li><li> &nbsp; &nbsp;at /juice-shop/node_modules/express/lib/router/index.js:286:9</li><li> &nbsp; &nbsp;at router.process_params (/juice-shop/node_modules/express/lib/router/index.js:346:12)</li><li> &nbsp; &nbsp;at next (/juice-shop/node_modules/express/lib/router/index.js:280:10)</li></ul>
+    </div>
+  </body>
+</html>

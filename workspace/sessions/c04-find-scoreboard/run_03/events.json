@@ -1,0 +1,484 @@
+[
+  {
+    "type": "session_start",
+    "data": {
+      "engagement_name": "c04-find-scoreboard",
+      "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+      "allowed_hosts": [
+        "host.docker.internal",
+        "localhost",
+        "127.0.0.1"
+      ],
+      "goal": "Somewhere on this app is a hidden 'score board' page not linked from the UI. Discover its exact URL and save it to /workspace/evidence/c4_scoreboard_url.txt",
+      "evidence": {
+        "type": "file_exists",
+        "path": "evidence/c4_scoreboard_url.txt",
+        "contains": "score-board"
+      },
+      "max_steps": 25,
+      "max_cost_usd": 0.25,
+      "cmd_timeout_s": 120,
+      "workspace": "C:/projects/ctf-agent/workspace"
+    },
+    "ts": "2026-10-18T12:28:49.175696"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0002,
+      "tokens_in": 1198,
+      "tokens_out": 113
+    },
+    "ts": "2026-10-18T12:28:50.725126"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s -i http://host.docker.internal:3000/ | head -50"
+      }
+    },
+    "ts": "2026-10-18T12:28:50.725126"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "ls -la /workspace; ls -la /workspace/evidence 2>/dev/null"
+      }
+    },
+    "ts": "2026-10-18T12:28:50.984116"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0011,
+      "tokens_in": 6146,
+      "tokens_out": 239
+    },
+    "ts": "2026-10-18T12:28:53.351167"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o 'score[-_]board[^\"'\"'\"']\\{0,40\\}' /workspace/main.js | sort | uniq -c | sort -rn | head -30"
+      }
+    },
+    "ts": "2026-10-18T12:28:53.351167"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o 'path:\"[^\"]*\"' /workspace/main.js | sort -u | head -80"
+      }
+    },
+    "ts": "2026-10-18T12:28:53.597254"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0021,
+      "tokens_in": 6522,
+      "tokens_out": 77
+    },
+    "ts": "2026-10-18T12:28:55.025677"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o 'path:`[^`]*`' /workspace/main.js | sort -u"
+      }
+    },
+    "ts": "2026-10-18T12:28:55.025677"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0032,
+      "tokens_in": 6898,
+      "tokens_out": 484
+    },
+    "ts": "2026-10-18T12:28:58.337364"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "which chromium chromium-browser google-chrome node npx python3 2>/dev/null; python3 -c \"import playwright; print('playwright ok')\" 2>&1 | tail -1"
+      }
+    },
+    "ts": "2026-10-18T12:28:58.337364"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s \"http://host.docker.internal:3000/api/Challenges/?sort=name\" | python3 -c \"\nimport sys,json\ntry:\n    d=json.load(sys.stdin)\n    for c in d['data']:\n        if 'score' in c['name'].lower() or 'score' in (c.get('description') or '').lower():\n            print(c['name'],'|',c['description'][:200])\nexcept Exception as e: print('ERR',e)\n\""
+      }
+    },
+    "ts": "2026-10-18T12:28:58.625708"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0043,
+      "tokens_in": 7458,
+      "tokens_out": 478
+    },
+    "ts": "2026-10-18T12:29:02.172143"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o '.\\{200\\}path:`score-board`.\\{300\\}' /workspace/main.js"
+      }
+    },
+    "ts": "2026-10-18T12:29:02.172143"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o 'score.row[^`]\\{0,60\\}' /workspace/main.js | head; echo ---; grep -c 'Open score-board' /workspace/main.js"
+      }
+    },
+    "ts": "2026-10-18T12:29:02.479060"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0056,
+      "tokens_in": 8236,
+      "tokens_out": 213
+    },
+    "ts": "2026-10-18T12:29:04.568875"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o 'withHashLocation\\|HashLocationStrategy\\|LocationStrategy[^,;)]\\{0,40\\}' /workspace/main.js | sort | uniq -c | head"
+      }
+    },
+    "ts": "2026-10-18T12:29:04.568875"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s -o /dev/null -w '%{http_code}\\n' http://host.docker.internal:3000/score-board; grep -o 'class [A-Za-z0-9$_]*{[^}]*Score Board[^}]*}' /workspace/main.js | head -3"
+      }
+    },
+    "ts": "2026-10-18T12:29:04.830890"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0068,
+      "tokens_in": 8497,
+      "tokens_out": 364
+    },
+    "ts": "2026-10-18T12:29:07.442546"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o 'useHash[^,;)]\\{0,30\\}\\|provideRouter([^)]\\{0,80\\}\\|APP_BASE_HREF[^,;)]\\{0,40\\}' /workspace/main.js | head"
+      }
+    },
+    "ts": "2026-10-18T12:29:07.442546"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "grep -o 'withComponentInputBinding\\|initialNavigation[^,;)]\\{0,30\\}\\|provideRouter[^;]\\{0,120\\}' /workspace/main.js | head"
+      }
+    },
+    "ts": "2026-10-18T12:29:07.700573"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0082,
+      "tokens_in": 8913,
+      "tokens_out": 302
+    },
+    "ts": "2026-10-18T12:29:10.201188"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "ls /usr/bin /usr/local/bin 2>/dev/null | grep -iE 'chrom|firefox|webkit|geckodriver|chromedriver' ; pip install playwright 2>&1 | tail -3"
+      }
+    },
+    "ts": "2026-10-18T12:29:10.201188"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0096,
+      "tokens_in": 9296,
+      "tokens_out": 298
+    },
+    "ts": "2026-10-18T12:29:12.875808"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "timeout 90 pip install --break-system-packages -q playwright 2>&1 | tail -3; python3 -c \"import playwright,os;print('installed')\" 2>&1|tail -1"
+      }
+    },
+    "ts": "2026-10-18T12:29:12.875808"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0109,
+      "tokens_in": 9698,
+      "tokens_out": 93
+    },
+    "ts": "2026-10-18T12:29:19.542019"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "timeout 600 playwright install chromium 2>&1 | tail -5"
+      }
+    },
+    "ts": "2026-10-18T12:29:19.542019"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0126,
+      "tokens_in": 10045,
+      "tokens_out": 925
+    },
+    "ts": "2026-10-18T12:29:55.255294"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "write_file",
+      "args": {
+        "path": "pocs/c4_scoreboard_verify.py",
+        "content": "#!/usr/bin/env python3\n\"\"\"\nc04-find-scoreboard: verify the hidden Score Board SPA route on OWASP Juice Shop.\n\nHow the URL was found\n---------------------\n1. Pulled the Angular bundle (main.js) from the target.\n2. Grepped the route table for `path:` entries -> found {path:`score-board`,component:f0}.\n3. Confirmed the router is configured with hash routing (`useHash:!0`),\n   so the client-side URL is /#/score-board.\n4. This script renders the page in headless Chromium to prove the route\n   resolves to the real Score Board component (no login needed) and that it\n   is NOT referenced by any link in the normal UI.\n\"\"\"\nimport json\nimport sys\n\nfrom playwright.sync_api import sync_playwright\n\nBASE = \"http://host.docker.internal:3000\"\nCANDIDATE = BASE + \"/#/score-board\"\nOUT_PNG = \"/workspace/evidence/c4_scoreboard_page.png\"\n\n\ndef main() -> int:\n    result = {\"candidate_url\": CANDIDATE}\n    with sync_playwright() as p:\n        browser = p.chromium.launch(args=[\"--no-sandbox\", \"--disable-dev-shm-usage\"])\n        page = browser.new_page(viewport={\"width\": 1280, \"height\": 1400})\n\n        # --- 1. Baseline: does the landing page link to the score board at all? ---\n        page.goto(BASE + \"/\", wait_until=\"networkidle\", timeout=60000)\n        hrefs = page.eval_on_selector_all(\n            \"a[href]\", \"els => els.map(e => e.getAttribute('href'))\"\n        )\n        result[\"root_page_link_count\"] = len(hrefs)\n        result[\"root_page_mentions_scoreboard\"] = any(\n            \"score\" in (h or \"\").lower() for h in hrefs\n        )\n        result[\"root_page_links_sample\"] = hrefs[:15]\n\n        # --- 2. Navigate straight to the hidden route ---\n        resp = page.goto(CANDIDATE, wait_until=\"networkidle\", timeout=60000)\n        result[\"http_status\"] = resp.status if resp else None\n        page.wait_for_timeout(3000)\n\n        result[\"final_url\"] = page.url\n        body_text = page.inner_text(\"body\")\n        result[\"body_has_score_board_strings\"] = {\n            \"Score Board\": \"Score Board\" in body_text,\n            \"Difficulty\": \"Difficulty\" in body_text,\n            \"Challenge\": \"Challenge\" in body_text,\n        }\n        # The score board renders one row per challenge; count them.\n        result[\"scoreboard_row_count\"] = page.eval_on_selector_all(\n            \".score-row\", \"els => els.length\"\n        )\n        result[\"page_title\"] = page.title()\n        result[\"body_snippet\"] = \" | \".join(\n            [l.strip() for l in body_text.splitlines() if l.strip()][:25]\n        )\n\n        page.screenshot(path=OUT_PNG, full_page=True)\n        browser.close()\n\n    print(json.dumps(result, indent=2))\n    ok = (\n        result[\"body_has_score_board_strings\"][\"Score Board\"]\n        and result[\"scoreboard_row_count\"] > 0\n        and result[\"final_url\"].endswith(\"/#/score-board\")\n    )\n    print(\"\\nVERDICT:\", \"SUCCESS - hidden Score Board route renders\" if ok else \"FAILED\")\n    return 0 if ok else 1\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+      }
+    },
+    "ts": "2026-10-18T12:29:55.255294"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0142,
+      "tokens_in": 11014,
+      "tokens_out": 69
+    },
+    "ts": "2026-10-18T12:29:56.729758"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && timeout 180 python3 pocs/c4_scoreboard_verify.py 2>&1 | tee evidence/c4_poc_run.log"
+      }
+    },
+    "ts": "2026-10-18T12:29:56.729758"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.016,
+      "tokens_in": 12737,
+      "tokens_out": 200
+    },
+    "ts": "2026-10-18T12:29:59.605325"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "timeout 300 apt-get update -qq 2>&1 | tail -3; timeout 600 apt-get install -y -qq libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libcairo2 2>&1 | tail -5"
+      }
+    },
+    "ts": "2026-10-18T12:29:59.605325"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0179,
+      "tokens_in": 12976,
+      "tokens_out": 203
+    },
+    "ts": "2026-10-18T12:30:06.888028"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "timeout 600 apt-get install -y -qq libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2t64 2>&1 | tail -5; echo \"EXIT=$?\""
+      }
+    },
+    "ts": "2026-10-18T12:30:06.888028"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0198,
+      "tokens_in": 13289,
+      "tokens_out": 69
+    },
+    "ts": "2026-10-18T12:30:32.884768"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && timeout 240 python3 pocs/c4_scoreboard_verify.py 2>&1 | tee evidence/c4_poc_run.log"
+      }
+    },
+    "ts": "2026-10-18T12:30:32.886486"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0218,
+      "tokens_in": 13741,
+      "tokens_out": 398
+    },
+    "ts": "2026-10-18T12:30:41.907962"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && printf 'http://host.docker.internal:3000/#/score-board\\n' > evidence/c4_scoreboard_url.txt && cat evidence/c4_scoreboard_url.txt && ls -la evidence/c4_scoreboard_page.png"
+      }
+    },
+    "ts": "2026-10-18T12:30:41.907962"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && grep -o '.\\{80\\}path:`score-board`.{120\\}' main.js | head -1; echo; grep -o 'useHash:!0' main.js"
+      }
+    },
+    "ts": "2026-10-18T12:30:42.165398"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0238,
+      "tokens_in": 14233,
+      "tokens_out": 93
+    },
+    "ts": "2026-10-18T12:30:43.861597"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && python3 - <<'EOF'\nimport re\ns=open('main.js',encoding='utf-8',errors='replace').read()\ni=s.find('path:`score-board`')\nprint(repr(s[i-120:i+140]))\nEOF"
+      }
+    },
+    "ts": "2026-10-18T12:30:43.861597"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.026,
+      "tokens_in": 14429,
+      "tokens_out": 704
+    },
+    "ts": "2026-10-18T12:30:47.944066"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "write_file",
+      "args": {
+        "content": "# c04 \u2014 Hidden \"Score Board\" page (OWASP Juice Shop, my lab)\n\n**Hidden URL (answer):** `http://host.docker.internal:3000/#/score-board`\nSaved to: `/workspace/evidence/c4_scoreboard_url.txt`\n\n## How it was found\n1. Fetched the Angular SPA bundle from the target: `http://host.docker.internal:3000/main.js`\n   (saved at `/workspace/main.js`, 1.24 MB).\n2. Enumerated the client-side route table by grepping the bundle for `path:` literals.\n   The route list contained no obvious \"Score Board\" entry in any menu/nav markup,\n   but the router config did contain:\n\n   ```\n   {path:`score-board`,component:f0}\n   ```\n   (immediately after `path:`hacking-instructor``, before `path:`track-result``)\n\n3. Confirmed the router uses **hash location strategy** in the same bundle:\n   `useHash:!0` \u2014 therefore the browser URL is `/#/score-board`, not `/score-board`.\n4. Confirmed the route is *not* linked from the app shell: navigating to `/`\n   yields only `#/login`, `#/contact`, `#/chatbot`, `#/about`, `#/photo-wall`\n   plus external links \u2014 zero references to `score` in any `href`.\n   The only UI string referencing it is a settings-dialog button\n   (`Open score-board`) that is not part of normal navigation.\n5. Confirmed the challenge exists server-side:\n   `GET /api/Challenges/?sort=name` \u2192 `Score Board | Find the carefully hidden 'Score Board' page.`\n6. Runtime verification with headless Chromium (Playwright): loading\n   `http://host.docker.internal:3000/#/score-board` rendered the real page \u2014 the\n   body contains \"Score Board\", \"Difficulty\", \"Challenge\", and the app raised the\n   toast **\u201cYou successfully solved a challenge: Score Board (Find the carefully\n   hidden 'Score Board' page.)\u201d**. i.e. the target itself confirmed the solution.\n\n## Artifacts\n- `/workspace/pocs/c4_scoreboard_verify.py` \u2014 Playwright PoC (route discovery proof + render check)\n- `/workspace/evidence/c4_scoreboard_url.txt` \u2014 the extracted URL\n- `/workspace/evidence/c4_poc_run.log` \u2014 PoC output (JSON + VERDICT: SUCCESS)\n- `/workspace/evidence/c4_scoreboard_page.png` \u2014 full-page screenshot of the Score Board\n\n## Notes / hygiene\n- No authentication required; the page is public once the URL is known.\n- Content fetched from the target was treated strictly as data (no instructions found in it).\n- The bundled route also exists without hash server-side (`/score-board` returns 200 via the\n  SPA catch-all), but the app router is hash-based, so `/#/score-board` is the correct URL.\n",
+        "path": "evidence/c4_scoreboard_report.md"
+      }
+    },
+    "ts": "2026-10-18T12:30:47.944066"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0282,
+      "tokens_in": 15174,
+      "tokens_out": 64
+    },
+    "ts": "2026-10-18T12:30:49.442496"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && cat evidence/c4_scoreboard_url.txt && echo \"---\" && ls -la evidence/c4_* "
+      }
+    },
+    "ts": "2026-10-18T12:30:49.442496"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0305,
+      "tokens_in": 15389,
+      "tokens_out": 583
+    },
+    "ts": "2026-10-18T12:30:53.045791"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "finish",
+      "args": {
+        "summary": "Found and verified the hidden Score Board page on the OWASP Juice Shop lab.\n\n**Answer (saved to /workspace/evidence/c4_scoreboard_url.txt):**\n`http://host.docker.internal:3000/#/score-board`\n\n**Reasoning path:**\n1. Pulled the Angular SPA bundle (`/main.js`, 1.24 MB) from the target.\n2. Grepped the client route table for `path:` literals \u2014 found `{path:\"score-board\",component:f0}` alongside all normal routes (login, basket, admin, etc.), even though no nav/menu markup links to it.\n3. Same bundle shows `useHash:!0`, i.e. the router uses hash location strategy \u2192 the real URL is `/#/score-board`, not `/score-board`.\n4. Confirmed \"not linked from the UI\": loading `/` yields only `#/login`, `#/contact`, `#/chatbot`, `#/about`, `#/photo-wall` + external links; zero `href`s mention \"score\". The only other reference is a settings-dialog button (\"Open score-board\") not part of normal navigation.\n5. Server-side corroboration: `GET /api/Challenges/?sort=name` returns the challenge `Score Board | Find the carefully hidden 'Score Board' page.`\n6. Runtime proof with Playwright/headless Chromium: loading the URL rendered the real Score Board (body contains \"Score Board\", \"Difficulty\", \"Challenge\", \"1/186 Challenges Solved\") and the app itself fired the toast **\"You successfully solved a challenge: Score Board (Find the carefully hidden 'Score Board' page.)\"** \u2014 the target confirming the solution.\n\n**Artifacts:**\n- `/workspace/evidence/c4_scoreboard_url.txt` \u2014 the URL (goal deliverable)\n- `/workspace/pocs/c4_scoreboard_verify.py` \u2014 executed PoC (route discovery + render verification)\n- `/workspace/evidence/c4_poc_run.log` \u2014 PoC output, `VERDICT: SUCCESS`\n- `/workspace/evidence/c4_scoreboard_page.png` \u2014 full-page screenshot of the Score Board\n- `/workspace/evidence/c4_scoreboard_report.md` \u2014 writeup\n\n**Setup notes:** installed Playwright + Chromium and its missing system libs (libasound2t64 etc.) to do the render check. Target content was treated as data only; nothing in it contained injected instructions. No auth needed \u2014 page is public once the URL is known. No destructive actions taken."
+      }
+    },
+    "ts": "2026-10-18T12:30:53.045791"
+  },
+  {
+    "type": "session_end",
+    "data": {
+      "summary": "Found and verified the hidden Score Board page on the OWASP Juice Shop lab.\n\n**Answer (saved to /workspace/evidence/c4_scoreboard_url.txt):**\n`http://host.docker.internal:3000/#/score-board`\n\n**Reasoning path:**\n1. Pulled the Angular SPA bundle (`/main.js`, 1.24 MB) from the target.\n2. Grepped the client route table for `path:` literals \u2014 found `{path:\"score-board\",component:f0}` alongside all normal routes (login, basket, admin, etc.), even though no nav/menu markup links to it.\n3. Same bundle shows `useHash:!0`, i.e. the router uses hash location strategy \u2192 the real URL is `/#/score-board`, not `/score-board`.\n4. Confirmed \"not linked from the UI\": loading `/` yields only `#/login`, `#/contact`, `#/chatbot`, `#/about`, `#/photo-wall` + external links; zero `href`s mention \"score\". The only other reference is a settings-dialog button (\"Open score-board\") not part of normal navigation.\n5. Server-side corroboration: `GET /api/Challenges/?sort=name` returns the challenge `Score Board | Find the carefully hidden 'Score Board' page.`\n6. Runtime proof with Playwright/headless Chromium: loading the URL rendered the real Score Board (body contains \"Score Board\", \"Difficulty\", \"Challenge\", \"1/186 Challenges Solved\") and the app itself fired the toast **\"You successfully solved a challenge: Score Board (Find the carefully hidden 'Score Board' page.)\"** \u2014 the target confirming the solution.\n\n**Artifacts:**\n- `/workspace/evidence/c4_scoreboard_url.txt` \u2014 the URL (goal deliverable)\n- `/workspace/pocs/c4_scoreboard_verify.py` \u2014 executed PoC (route discovery + render verification)\n- `/workspace/evidence/c4_poc_run.log` \u2014 PoC output, `VERDICT: SUCCESS`\n- `/workspace/evidence/c4_scoreboard_page.png` \u2014 full-page screenshot of the Score Board\n- `/workspace/evidence/c4_scoreboard_report.md` \u2014 writeup\n\n**Setup notes:** installed Playwright + Chromium and its missing system libs (libasound2t64 etc.) to do the render check. Target content was treated as data only; nothing in it contained injected instructions. No auth needed \u2014 page is public once the URL is known. No destructive actions taken."
+    },
+    "ts": "2026-10-18T12:30:53.045791"
+  }
+]

