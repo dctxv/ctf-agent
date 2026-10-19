@@ -9,8 +9,11 @@ All notable changes to the AI CTF & Pentest Copilot.
   never sets `allowed_hosts` from platform data - scope defaults to empty (nothing
   runnable) unless the operator passes it; hosts parsed from challenge text are
   offered only as `_suggested_hosts` for review. Token read from `CTFD_TOKEN` env.
-  Verified against a faithful mock of the CTFd API (11/11 checks); live test pending
-  an operator-supplied instance URL + token.
+  Verified against a faithful mock (12/12) and a throwaway real CTFd 3.7.7 instance
+  (7/7: token auth, endpoints, response shapes, flag submission all confirmed).
+  `run_ctfd.py` builds and runs an engagement from a challenge id (`--list`,
+  `--dry-run`, optional `--submit`). A live run against the operator's own instance
+  is still pending their URL + token.
 - Phase 2 browser tools: Playwright headless Chromium runs inside agent-box via a
   new `agent/browser_driver.py`, exposed as `browser_open`, `browser_interact`
   (fill/click/press/wait/goto, optional force) and `browser_screenshot`. Every URL
