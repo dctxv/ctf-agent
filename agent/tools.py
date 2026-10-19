@@ -139,6 +139,86 @@ def web_search(query: str) -> str:
     except Exception as e:
         return f"web_search error: {e}"
 
+# ---------------- browser tools (Phase 2: headless Chromium in the toolbox) ----------------
+# Playwright-driven Chromium runs INSIDE agent-box, the same cage and network
+# view as run_command (the target is http://host.docker.internal:3000 there).
+# Every URL is scope-checked against the engagement allowlist, exactly like
+# run_command. The driver source lives in browser_driver.py and is piped into
+# the container's python3 on each call; the command travels as argv.
+
+_BROWSER_DRIVER = (Path(__file__).parent / "browser_driver.py").read_text(encoding="utf-8")
+
+
+def _scope_check_url(url: str, engagement: dict):
+    hosts = extract_hosts(url or "")
+    if not hosts:
+        return "BLOCKED: no host parsed from URL. Pass a full http(s):// URL."
+    bad = [h for h in hosts if not host_allowed(h, engagement["allowed_hosts"])]
+    if bad:
+        return (f"ALLOWLIST BLOCKED: out-of-scope host(s) {bad}. "
+                f"Scope: {engagement['allowed_hosts']}. Stay in scope or use ask_human.")
+    return None
+
+
+def _format_browser(d: dict) -> str:
+    lines = [f"HTTP {d.get('status')} | {d.get('title','')}", f"URL: {d.get('url','')}"]
+    if d.get("screenshot"):
+        lines.append(f"screenshot saved: {d['screenshot']}")
+    lines.append("\n--- visible text ---\n" + (d.get("text") or ""))
+    if d.get("inputs"):
+        lines.append("\n--- inputs ---\n" + "\n".join(
+            f"[{i}] name={x.get('name')} type={x.get('type')} placeholder={x.get('placeholder')}"
+            for i, x in enumerate(d["inputs"])))
+    btns = [b for b in (d.get("buttons") or []) if b]
+    if btns:
+        lines.append("\n--- buttons ---\n" + "\n".join(f"[{i}] {b}" for i, b in enumerate(btns)))
+    if d.get("links"):
+        lines.append("\n--- links (first 40) ---\n" + "\n".join(
+            f"{l.get('text','')} -> {l.get('href','')}" for l in d["links"]))
+    return _truncate("\n".join(lines), 9000)
+
+
+def _run_browser(cmd: dict, engagement: dict) -> str:
+    urls = [cmd.get("url", "")] + [s.get("url", "") for s in cmd.get("actions", [])
+                                   if s.get("action") == "goto"]
+    for u in urls:
+        if not u:
+            continue
+        blocked = _scope_check_url(u, engagement)
+        if blocked:
+            return blocked
+    try:
+        r = subprocess.run(
+            ["docker", "exec", "-i", "-e", "LANG=C.UTF-8", CONTAINER, "python3", "-", json.dumps(cmd)],
+            input=_BROWSER_DRIVER, capture_output=True,
+            encoding="utf-8", errors="replace",
+            timeout=engagement.get("browser_timeout_s", 90),
+        )
+    except subprocess.TimeoutExpired:
+        return f"TIMEOUT: browser action exceeded {engagement.get('browser_timeout_s', 90)}s."
+    if r.returncode != 0:
+        return f"browser error (exit={r.returncode}):\n{_truncate(r.stderr or r.stdout, 1500)}"
+    try:
+        data = json.loads((r.stdout or "").strip().splitlines()[-1])
+    except Exception:
+        return f"browser error: could not parse driver output:\n{_truncate(r.stdout, 1500)}"
+    if not data.get("ok"):
+        return f"browser error: {data.get('error', 'unknown')}"
+    return _format_browser(data)
+
+
+def browser_open(url: str, engagement: dict) -> str:
+    return _run_browser({"url": url}, engagement)
+
+
+def browser_interact(url: str, actions: list, engagement: dict) -> str:
+    return _run_browser({"url": url, "actions": actions or []}, engagement)
+
+
+def browser_screenshot(url: str, path: str, engagement: dict) -> str:
+    rel = _normalize(path or "screenshot.png")
+    return _run_browser({"url": url, "screenshot": f"/workspace/{rel}"}, engagement)
+
 # ---------------- tool schemas (STAYS BYTE-IDENTICAL across calls -> caching) ----------------
 
 TOOL_SCHEMAS = [
@@ -167,6 +247,38 @@ TOOL_SCHEMAS = [
         "parameters": {"type": "object",
             "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
     {"type": "function", "function": {
+        "name": "browser_open",
+        "description": "Open a URL in a headless Chromium browser (renders JavaScript, unlike curl) "
+                       "and return the rendered page: title, visible text, and the links, buttons and "
+                       "inputs on it. Use for SPAs/JS-heavy apps. Only in-scope hosts are permitted.",
+        "parameters": {"type": "object",
+            "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
+    {"type": "function", "function": {
+        "name": "browser_interact",
+        "description": "Open a URL then run a sequence of browser actions (fill forms, click, press keys), "
+                       "returning the resulting rendered page. Cookies/login persist across calls. "
+                       "Only in-scope hosts are permitted.",
+        "parameters": {"type": "object", "properties": {
+            "url": {"type": "string"},
+            "actions": {"type": "array", "items": {"type": "object", "properties": {
+                "action": {"type": "string", "enum": ["click", "fill", "press", "wait", "goto"]},
+                "selector": {"type": "string", "description": "CSS selector (click/fill)"},
+                "value": {"type": "string", "description": "text to fill"},
+                "key": {"type": "string", "description": "key to press, e.g. Enter"},
+                "ms": {"type": "integer", "description": "wait milliseconds"},
+                "url": {"type": "string", "description": "navigate (goto)"},
+                "force": {"type": "boolean", "description": "force a click past overlays/animations"}},
+                "required": ["action"]}}},
+            "required": ["url", "actions"]}}},
+    {"type": "function", "function": {
+        "name": "browser_screenshot",
+        "description": "Open a URL in headless Chromium and save a PNG screenshot to the workspace. "
+                       "Only in-scope hosts are permitted.",
+        "parameters": {"type": "object",
+            "properties": {"url": {"type": "string"},
+                           "path": {"type": "string", "description": "workspace-relative output path, e.g. 'shots/home.png'"}},
+            "required": ["url", "path"]}}},
+    {"type": "function", "function": {
         "name": "ask_human",
         "description": "Ask the human operator a question. Use when stuck, unsure, "
                        "or when an action needs approval.",
@@ -191,6 +303,12 @@ def execute_tool(name: str, args: dict, engagement: dict, human_input_fn) -> str
         return list_files(args.get("path", "."))
     if name == "web_search":
         return web_search(args["query"])
+    if name == "browser_open":
+        return browser_open(args["url"], engagement)
+    if name == "browser_interact":
+        return browser_interact(args["url"], args.get("actions", []), engagement)
+    if name == "browser_screenshot":
+        return browser_screenshot(args["url"], args.get("path", "screenshot.png"), engagement)
     if name == "ask_human":
         return human_input_fn(args["question"])
     if name == "finish":

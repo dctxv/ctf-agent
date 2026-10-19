@@ -3,6 +3,13 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Phase 2 browser tools: Playwright headless Chromium runs inside agent-box via a
+  new `agent/browser_driver.py`, exposed as `browser_open`, `browser_interact`
+  (fill/click/press/wait/goto, optional force) and `browser_screenshot`. Every URL
+  is scope-checked against the engagement allowlist, exactly like `run_command`.
+  Renders JS SPAs that curl cannot (verified vs Juice Shop: product list, hidden
+  score-board route, login flow, PNG screenshot). Dockerfile installs Playwright +
+  Chromium via `--with-deps`.
 - Fixed `web_search` silently masking failures: it POSTed to Tavily with no HTTP
   status check, so an auth failure collapsed to "No results found." The 3× baseline
   made 23 web_search calls (c08/c10) that all failed this way — Tavily returns HTTP

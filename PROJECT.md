@@ -60,7 +60,7 @@ Python orchestrator  ──── API ───▶         nmap · sqlmap · ffu
   └─ Event emitter     (dashboard-ready)    + targets roam: Juice Shop, HTB VPN, etc.
 ```
 
-**Tool surface:** `run_command` (allowlist-checked docker exec), `read_file` / `write_file` / `list_files` (workspace-sandboxed, LF-safe), `web_search`, `ask_human`, `finish`.
+**Tool surface:** `run_command` (allowlist-checked docker exec), `read_file` / `write_file` / `list_files` (workspace-sandboxed, LF-safe), `web_search`, `browser_open` / `browser_interact` / `browser_screenshot` (headless Chromium in-container, scope-checked per URL), `ask_human`, `finish`.
 
 **Engineering discipline:** append-only transcripts (preserves prompt-prefix cache pricing - cached input is ~50× cheaper), byte-stable tool schemas, UTF-8 end-to-end (cp1252 crash class eliminated), path normalization (both `/workspace/x` and `x` resolve), preflight validation (9 checks including live key + balance), secrets in `.env` (never in repo or image), N-run eval harness with per-run artifact isolation and git provenance on every row.
 
@@ -70,7 +70,7 @@ Python orchestrator  ──── API ───▶         nmap · sqlmap · ffu
 
 | Gap | Reason it exists |
 |---|---|
-| **No browser interaction** | Not built yet (Phase 2). Today everything is CLI/HTTP - the agent can't click through a web UI, fill forms, or read the CTF challenge page you're looking at. Playwright integration is designed but unbuilt. |
+| **Browser: headless only, no platform adapters** | Playwright-driven headless Chromium now runs inside agent-box (`browser_open` / `browser_interact` / `browser_screenshot`), scope-checked per URL: the agent can render JS SPAs, read trimmed DOM, fill/click/press, and screenshot (verified against Juice Shop). Still missing from Phase 2: a headed/supervised mode, platform adapters (HTB/CTFd/picoCTF), and allowlist auto-population from spawned machine IPs. |
 | **No platform integration (HTB/picoCTF)** | Phase 2. Challenge data must currently be hand-configured in `engagement.json`. No API adapters exist yet. |
 | **Weak on pro-tier CTF / pwn categories** | Model-scale reality: DeepSeek-class models score ~40% on Cybench vs ~73.5% for frontier models. Binary exploitation is the weakest category for *all* current agents. Mitigation: pwntools are in the container, escalation tier is wired - but this is a known ceiling, not a bug. |
 | **Can't crack the c08 KeePass DB** | The master password is not in rockyou: across all 3 baseline runs the agent extracted the `$keepass$` hash and ran john and hashcat (`-m 13400`) with best64/best66 rules to exhaustion, 0/1 recovered each time. The toolbox ships john, hashcat and a decompressed rockyou, so this is a wordlist/knowledge gap, not tooling. Solving it would need a targeted wordlist or an app-sourced hint, which is the agent's discovery problem. |

@@ -19,7 +19,11 @@ RUN pip3 install --break-system-packages \
     semgrep \
     pykeepass pycryptodomex \
     uncompyle6 decompyle3 \
-    pyotp
+    pyotp \
+    playwright
+
+# Headless Chromium for the agent's browser tools (Angular/JS targets curl can't render)
+RUN python3 -m playwright install --with-deps chromium
 
 WORKDIR /workspace
 CMD ["/bin/bash"]
