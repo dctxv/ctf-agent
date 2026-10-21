@@ -54,8 +54,13 @@ def main():
     audit = _audit_meta(a.session)
     findings_dir = (ROOT / "workspace" / audit["findings"]).parent
     findings = load_findings(findings_dir)
+    refuted = [f for f in findings if f.get("verdict") == "refuted"]
+    if refuted:  # court-refuted findings are likely hallucinations; keep them out of disclosure
+        findings = [f for f in findings if f.get("verdict") != "refuted"]
     repo = a.repo or audit.get("repo")
-    print(f"[{a.session}] {len(findings)} findings | repo: {repo or '(none)'}")
+    print(f"[{a.session}] {len(findings)} findings"
+          + (f" ({len(refuted)} refuted, dropped)" if refuted else "")
+          + f" | repo: {repo or '(none)'}")
     if not findings:
         raise SystemExit("no findings to export")
 

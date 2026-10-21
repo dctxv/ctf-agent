@@ -134,7 +134,7 @@ async function showFindings(id) {
       const c = document.createElement('div');
       c.className = 'fc sev-' + sev;
       c.innerHTML = `<div class="h">${esc(sev.toUpperCase())} · ${esc(f.title || '')}</div>`
-        + `<div class="m">${esc(f.file || '')}${f.line ? ':' + esc(f.line) : ''} · ${esc(f.cwe || '')} · conf ${esc(f.confidence || '?')}${f.poc ? ' · ' + esc(f.poc) : ''}</div>`
+        + `<div class="m">${esc(f.file || '')}${f.line ? ':' + esc(f.line) : ''} · ${esc(f.cwe || '')} · conf ${esc(f.confidence || '?')}${f.poc ? ' · ' + esc(f.poc) : ''}${f.verdict ? ' · ' + verdictSpan(f.verdict) : ''}</div>`
         + (f.description ? `<div class="d">${esc(f.description)}</div>` : '');
       box.appendChild(c);
     }
@@ -172,6 +172,11 @@ async function startAudit() {
 }
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+function verdictSpan(v) {
+  const c = { confirmed: '#86f09a', refuted: '#ff8a8a', uncertain: '#e3d34a' }[v] || '#9ab';
+  return `<b style="color:${c}">${esc(v)}</b>`;
+}
 
 loadSessions();
 setInterval(loadSessions, 5000);  // keep statuses fresh (running -> finished)

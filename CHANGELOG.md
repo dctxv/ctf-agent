@@ -3,6 +3,13 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Findings court (second-pass verifier): `run_court.py` + `agent/court.py` re-read the cited
+  source for each finding and adversarially confirm/refute it (verdict + grounded reason),
+  merged back into findings.json. Eval-verifiable: on a labeled set (4 real fixture vulns + 3
+  planted fakes) it confirmed all reals and refuted all fakes - 0 hallucinations leaked. On the
+  dvpwa audit: 11 confirmed, 3 refuted (it pushed back on over-stated LOW/MEDIUM items). The
+  dashboard shows the verdict on each finding card, and `run_disclose.py` drops refuted findings
+  from disclosure.
 - Responsible-disclosure export: `run_disclose.py` + `agent/disclosure.py` turn an audit's
   findings.json into a GitHub Security Advisory-style `disclosure.md` (summary, severity table,
   per-finding details) plus per-finding issue drafts. `--file-issues` auto-files GitHub issues

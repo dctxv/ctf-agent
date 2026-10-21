@@ -46,6 +46,10 @@ open-source app; see the honest limitations below before pointing it at anything
   GitHub Security Advisory-style Markdown plus issue drafts, and can auto-file GitHub issues, but
   only on repos you have push/admin access to. Third-party repos are refused and get the advisory
   for coordinated, private disclosure.
+- **Findings court (`run_court.py`).** An adversarial second pass that re-reads the cited code
+  and confirms or refutes each finding (verdict + grounded reason), to catch hallucinations.
+  Verdicts show on the dashboard cards, and refuted findings are dropped from disclosure. On a
+  labeled test (real vulns + planted fakes) it leaked zero fakes.
 - **CTFd platform adapter (`run_ctfd.py`).** Pulls a challenge from a CTFd instance via
   its API, builds an engagement, downloads files, and can submit the flag. Scope stays
   operator-controlled (empty by default). Validated against a mock and a real local CTFd
