@@ -3,6 +3,11 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Phase 3 learning layer: `agent/learn.py` + `run_learn.py` turn a finished session's
+  events.json (goal + tool-call methodology + final summary) into a study aid - a Markdown
+  writeup, key concepts, and 6-10 flashcards (JSON) - via one cheap LLM call, written next
+  to the session. Handles eval runs under `run_NN/`. Demoed on the dvpwa audit and a c03
+  SQLi run: accurate, concrete writeups (payloads, endpoints, file:line) and 10 flashcards each.
 - Phase 2.5 polish + scale demo: `run_audit.py` and `run_ctfd.py` force UTF-8 stdout so a
   cp1252 Windows console no longer crashes on tool output; the audit goal now writes the
   report incrementally so partial progress survives the step budget. Demoed the auditor at
