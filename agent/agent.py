@@ -57,7 +57,12 @@ class AgentSession:
         self.human_input_fn = human_input_fn
         self.run_index = run_index
         self.auto_learn = auto_learn          # opt-in: generate a study aid at session end
-        self.artifact_dir = None
+        self.artifact_dir = self._session_dir()
+        try:  # fresh live event log the dashboard can tail in real time
+            self.artifact_dir.mkdir(parents=True, exist_ok=True)
+            (self.artifact_dir / "events.jsonl").write_text("", encoding="utf-8")
+        except Exception:
+            self.artifact_dir = None
         self.client = OpenAI(api_key=os.environ["DEEPSEEK_API_KEY"],
                              base_url="https://api.deepseek.com")
         self.messages = []          # append-only (keeps prompt-prefix cache hits)
@@ -75,6 +80,12 @@ class AgentSession:
         ev = {"type": etype, "data": data, "ts": datetime.utcnow().isoformat()}
         self.events.append(ev)
         print(f"[{ev['ts'][11:19]}] {etype}: {json.dumps(data)[:300]}")
+        if getattr(self, "artifact_dir", None):   # append to the live log for the dashboard
+            try:
+                with open(self.artifact_dir / "events.jsonl", "a", encoding="utf-8") as f:
+                    f.write(json.dumps(ev, default=str) + "\n")
+            except Exception:
+                pass
 
     # ---------------- main loop ----------------
     def run(self):
@@ -190,13 +201,16 @@ class AgentSession:
         return SYSTEM_PROMPT.format(allowed_hosts=e["allowed_hosts"],
                                     goal=e["goal"], targets=e["targets"])
 
-    def _save_artifacts(self):
+    def _session_dir(self):
         name = self.engagement["engagement_name"].replace(" ", "_")
         out = Path(self.engagement.get("workspace", ".")) / "sessions" / name
         if self.run_index is not None:            # keep each eval run separate
             out = out / f"run_{self.run_index:02d}"
+        return out
+
+    def _save_artifacts(self):
+        out = self.artifact_dir or self._session_dir()
         out.mkdir(parents=True, exist_ok=True)
-        self.artifact_dir = out
         (out / "transcript.json").write_text(json.dumps(self.messages, indent=2, default=str),
                                              encoding="utf-8")
         (out / "events.json").write_text(json.dumps(self.events, indent=2),
