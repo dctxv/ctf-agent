@@ -20,8 +20,11 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from agent.adapters import github_engagement_name
 from agent.findings import load_findings
+from eval import report as eval_report
+from eval import store as eval_store
 
 SESSIONS = (ROOT / "workspace" / "sessions").resolve()
+EVAL_STORE = (ROOT / "eval" / "results.sqlite")
 
 app = FastAPI(title="CTF Agent Dashboard")
 
@@ -189,6 +192,49 @@ def api_findings(sid: str):
     if not audit or "findings" not in audit:
         return JSONResponse([])
     return JSONResponse(load_findings((ROOT / "workspace" / audit["findings"]).parent))
+
+
+# ---------------- evaluation subsystem views (read-only over eval/results.sqlite) ----------------
+
+def _eval_rows(experiment=""):
+    if not EVAL_STORE.exists():
+        return []
+    st = eval_store.Store(EVAL_STORE)
+    try:
+        rows = st.all_rows()
+    finally:
+        st.close()
+    return [r for r in rows if (not experiment or r.get("experiment_id") == experiment)]
+
+
+@app.get("/api/eval/experiments")
+def api_eval_experiments():
+    by = {}
+    for r in _eval_rows():
+        e = r.get("experiment_id") or "(none)"
+        d = by.setdefault(e, {"experiment_id": e, "trials": 0, "solved": 0,
+                              "infra": 0, "last_ts": ""})
+        d["trials"] += 1
+        if r.get("outcome") == "verified_success":
+            d["solved"] += 1
+        elif r.get("outcome") == "infra_error":
+            d["infra"] += 1
+        if (r.get("ts_utc") or "") > d["last_ts"]:
+            d["last_ts"] = r.get("ts_utc") or ""
+    return sorted(by.values(), key=lambda x: x["last_ts"], reverse=True)
+
+
+@app.get("/api/eval/report")
+def api_eval_report(experiment: str = ""):
+    rows = _eval_rows(experiment)
+    if not rows:
+        return JSONResponse({"empty": True})
+    return JSONResponse(eval_report.summarize(rows))
+
+
+@app.get("/api/eval/regression")
+def api_eval_regression(before: str, after: str):
+    return JSONResponse(eval_report.regression(_eval_rows(before), _eval_rows(after)))
 
 
 @app.get("/")

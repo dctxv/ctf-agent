@@ -12,6 +12,12 @@ All notable changes to the AI CTF & Pentest Copilot.
   default-drop egress firewall (nftables, iptables fallback) for evaluation trial containers,
   live-verified to drop out-of-scope traffic while allowing loopback; `Dockerfile` gains
   nftables/iptables. `tests/test_scope.py`: 32 Tier A safety tests.
+- M5 dashboard evaluation view: `dashboard/server.py` gains read-only `/api/eval/experiments`,
+  `/api/eval/report`, and `/api/eval/regression` over the eval store, and `dashboard/index.html`
+  gains an Eval tab that renders verified solve-rate with Wilson confidence intervals,
+  per-category / per-challenge tables, and the honesty caveats - straight from the structured
+  store. Localhost, read-only. `.claude/launch.json` added so the dashboard starts with one
+  command. Verified live in the browser against the smoke experiments.
 - M2 model-provider layer (`agent/llm.py`): a single `LLMClient` centralizes the DeepSeek
   (OpenAI-compatible) client, role -> model routing (loop/escalate/verify/summarize), pricing,
   and the thinking-mode handling that `agent.py`, `court.py`, and `learn.py` each hard-coded -

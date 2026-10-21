@@ -43,6 +43,7 @@
     <div id="tabs">
       <button class="tab active" id="tab-sessions" onclick="showTab('sessions')">Sessions</button>
       <button class="tab" id="tab-repos" onclick="showTab('repos')">Repos</button>
+      <button class="tab" id="tab-eval" onclick="showTab('eval')">Eval</button>
     </div>
     <div id="panes">
       <div id="sessions">loading…</div>
@@ -52,6 +53,10 @@
         <input id="repomax" type="number" value="40" min="5" max="80" title="max steps (cost scales with steps)">
         <button onclick="startAudit()">Audit</button>
         <div id="repostatus" style="font-size:12px;color:#a60;margin-top:6px"></div>
+      </div>
+      <div id="eval" style="display:none">
+        <div style="font-size:13px;color:#555;margin:4px 0">Evaluation experiments (verified solve rates from the structured store):</div>
+        <div id="exps">loading…</div>
       </div>
     </div>
   </div>
@@ -64,10 +69,11 @@
 let es = null, pollTimer = null;
 
 function showTab(name) {
-  document.getElementById('sessions').style.display = name === 'sessions' ? 'block' : 'none';
-  document.getElementById('repos').style.display = name === 'repos' ? 'block' : 'none';
-  document.getElementById('tab-sessions').classList.toggle('active', name === 'sessions');
-  document.getElementById('tab-repos').classList.toggle('active', name === 'repos');
+  for (const t of ['sessions', 'repos', 'eval']) {
+    document.getElementById(t).style.display = t === name ? 'block' : 'none';
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+  }
+  if (name === 'eval') loadExperiments();
 }
 
 function encId(id) { return id.split('/').map(encodeURIComponent).join('/'); }
@@ -169,6 +175,68 @@ async function startAudit() {
     } catch (e) {}
     if (tries > 60) { clearInterval(pollTimer); st.textContent = 'timed out waiting for the session to start'; }
   }, 1500);
+}
+
+async function loadExperiments() {
+  const el = document.getElementById('exps');
+  try {
+    const list = await (await fetch('/api/eval/experiments')).json();
+    el.innerHTML = list.length ? '' : 'no experiments yet (run run_experiment.py)';
+    for (const x of list) {
+      const d = document.createElement('div');
+      d.className = 's';
+      d.innerHTML = `<span class="badge" style="color:#2a8a2a">${x.solved}/${x.trials}</span><b>${esc(x.experiment_id)}</b>`
+        + `<div class="g">${x.infra} infra · ${esc((x.last_ts || '').slice(0, 19))}</div>`;
+      d.onclick = () => openExperiment(x.experiment_id);
+      el.appendChild(d);
+    }
+  } catch (e) { el.textContent = 'failed to load experiments'; }
+}
+
+async function openExperiment(exp) {
+  if (es) es.close();
+  if (pollTimer) clearInterval(pollTimer);
+  document.getElementById('hdr').textContent = '▣ eval: ' + exp;
+  document.getElementById('findings').innerHTML = '';
+  const feed = document.getElementById('events');
+  feed.innerHTML = 'loading report…';
+  try {
+    const s = await (await fetch('/api/eval/report?experiment=' + encodeURIComponent(exp))).json();
+    feed.innerHTML = s.empty ? 'no rows for this experiment' : renderReport(s);
+  } catch (e) { feed.innerHTML = 'failed to load report'; }
+}
+
+function rate(a) {
+  if (!a.n) return '0/0';
+  return `${a.solved}/${a.n} (${Math.round(a.solve_rate * 100)}%, 95% CI ${Math.round(a.ci_low * 100)}-${Math.round(a.ci_high * 100)}%)`;
+}
+
+function grpTable(title, grp) {
+  let h = `<div style="color:#8bd;margin:12px 0 4px">${esc(title)}</div>`;
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h += '<tr style="color:#9ab;text-align:left"><th>key</th><th>solve rate</th><th>mean $</th><th>steps</th><th>infra</th></tr>';
+  for (const k of Object.keys(grp)) {
+    const a = grp[k];
+    h += `<tr style="border-top:1px solid #223"><td>${esc(k)}</td><td>${esc(rate(a))}</td><td>${a.mean_cost_usd}</td><td>${a.mean_steps}</td><td>${a.infra_errors}</td></tr>`;
+  }
+  return h + '</table>';
+}
+
+function renderReport(s) {
+  const o = s.overall;
+  let h = '<div class="ev" style="color:#cfe3f0;white-space:normal">';
+  h += `<div style="font-size:14px;color:#86f09a;margin-bottom:6px">Verified solve rate: <b>${esc(rate(o))}</b></div>`;
+  h += `<div style="color:#9ab">infra excluded: ${o.infra_errors} · mean $${o.mean_cost_usd} · mean steps ${o.mean_steps} · mean ${o.mean_duration_s}s</div>`;
+  if (s.caveats && s.caveats.length) {
+    h += '<div style="margin:8px 0;padding:6px 9px;background:#1a1410;border-left:3px solid #f5a524;color:#f0d9b5">';
+    h += '<b>Read with care</b><ul style="margin:4px 0 0 16px;padding:0">';
+    for (const c of s.caveats) h += `<li>${esc(c)}</li>`;
+    h += '</ul></div>';
+  }
+  h += grpTable('By category', s.by_category);
+  h += grpTable('By challenge', s.by_challenge);
+  if (Object.keys(s.by_config).length > 1) h += grpTable('By config', s.by_config);
+  return h + '</div>';
 }
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
