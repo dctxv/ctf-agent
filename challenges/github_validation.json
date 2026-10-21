@@ -1,0 +1,12 @@
+[
+  {
+    "repo": "https://github.com/anxolerd/dvpwa",
+    "note": "Deliberately vulnerable aiohttp app (SQLi/XSS/weak-hash + EOL deps).",
+    "expected": [
+      {"label": "sql-injection", "cwe": "CWE-89"},
+      {"label": "cross-site-scripting", "cwe": "CWE-79"},
+      {"label": "weak-password-hash", "cwe": "CWE-916"},
+      {"label": "vulnerable-dependencies", "keyword": "dependen"}
+    ]
+  }
+]
