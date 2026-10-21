@@ -42,6 +42,10 @@ open-source app; see the honest limitations below before pointing it at anything
   prioritized report plus a structured `findings.json`. Demoed on a real OSS app (`dvpwa`):
   14 findings including SQLi, broken access control, stored XSS, weak hashing, and vulnerable
   dependencies.
+- **Responsible-disclosure export (`run_disclose.py`).** Turns an audit's `findings.json` into a
+  GitHub Security Advisory-style Markdown plus issue drafts, and can auto-file GitHub issues, but
+  only on repos you have push/admin access to. Third-party repos are refused and get the advisory
+  for coordinated, private disclosure.
 - **CTFd platform adapter (`run_ctfd.py`).** Pulls a challenge from a CTFd instance via
   its API, builds an engagement, downloads files, and can submit the flag. Scope stays
   operator-controlled (empty by default). Validated against a mock and a real local CTFd

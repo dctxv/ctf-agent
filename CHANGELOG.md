@@ -3,6 +3,14 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Responsible-disclosure export: `run_disclose.py` + `agent/disclosure.py` turn an audit's
+  findings.json into a GitHub Security Advisory-style `disclosure.md` (summary, severity table,
+  per-finding details) plus per-finding issue drafts. `--file-issues` auto-files GitHub issues
+  ONLY when the `GITHUB_TOKEN` has push/admin on the target repo (checked via the API); every
+  other case (no token, no write access, third-party repo) is refused and gets the advisory for
+  manual, coordinated disclosure. Verified: renders 14 dvpwa findings and refuses to file
+  without a token. Fail-closed by design; live filing needs `GITHUB_TOKEN` set and should be run
+  on your own repos.
 - GitHub repo audit: `run_audit.py --github https://github.com/owner/repo` shallow-clones the
   repo host-side (github.com never enters the allowlist; the code is scanned statically, never
   run) and audits it via the existing file-only flow. Audits now also emit a structured
@@ -17,7 +25,6 @@ All notable changes to the AI CTF & Pentest Copilot.
   streaming code; `GET /.../findings` + `agent/findings.py` render severity-sorted finding
   cards. Clears a prior same-id run so the UI follows the fresh one, not a stale finished
   session. Localhost/single-operator; the URL is validated to github.com/owner/repo.
-  Responsible-disclosure export is next.
 - Phase 5 privacy mode (target anonymization): `agent/privacy.py` replaces real hostnames,
   IPs and emails with stable placeholders before anything reaches the model API, and restores
   them before tools run - crucially BEFORE the allowlist check, so scope is enforced on real
