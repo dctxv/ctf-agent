@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 from agent.agent import AgentSession
 from agent.adapters import CTFdAdapter
+from agent.privacy import from_engagement
 
 try:  # remote/tool output is UTF-8; don't let a cp1252 console crash on it
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -39,6 +40,8 @@ def main():
     ap.add_argument("--allowed-hosts", default="", help="comma-separated authorized hosts for scope")
     ap.add_argument("--workspace", default="workspace", help="workspace dir (default: workspace)")
     ap.add_argument("--submit", action="store_true", help="submit the recovered flag after the run")
+    ap.add_argument("--privacy", action="store_true",
+                    help="anonymize target identifiers before the model API")
     ap.add_argument("--max-steps", type=int, default=40)
     ap.add_argument("--max-cost", type=float, default=1.0)
     args = ap.parse_args()
@@ -76,7 +79,8 @@ def main():
             {k: v for k, v in eng.items() if not k.startswith("_")}, indent=2))
         return
 
-    session = AgentSession(eng, human_input, auto_learn=True)
+    session = AgentSession(eng, human_input, auto_learn=True,
+                           privacy=from_engagement(eng) if a.privacy else None)
     try:
         session.run()
     except KeyboardInterrupt:

@@ -52,11 +52,12 @@ class AgentSession:
     """Event-emitting agent loop. The future dashboard subscribes to these events."""
 
     def __init__(self, engagement: dict, human_input_fn, run_index: int | None = None,
-                 auto_learn: bool = False):
+                 auto_learn: bool = False, privacy=None):
         self.engagement = engagement
         self.human_input_fn = human_input_fn
         self.run_index = run_index
         self.auto_learn = auto_learn          # opt-in: generate a study aid at session end
+        self.privacy = privacy                # optional target anonymization before the API
         self.artifact_dir = self._session_dir()
         try:  # fresh live event log the dashboard can tail in real time
             self.artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -90,9 +91,11 @@ class AgentSession:
     # ---------------- main loop ----------------
     def run(self):
         self.messages.append({"role": "system", "content": self._system_prompt()})
-        self.messages.append({"role": "user", "content":
-                              f"Begin. Engagement: {self.engagement['engagement_name']}. "
-                              f"Goal: {self.engagement['goal']}."})
+        begin = (f"Begin. Engagement: {self.engagement['engagement_name']}. "
+                 f"Goal: {self.engagement['goal']}.")
+        if self.privacy:
+            begin = self.privacy.scrub(begin)
+        self.messages.append({"role": "user", "content": begin})
         max_steps = self.engagement.get("max_steps", MAX_STEPS_DEFAULT)
         max_cost = self.engagement.get("max_cost_usd", 1.0)
 
@@ -147,6 +150,8 @@ class AgentSession:
                     args = json.loads(tc.function.arguments or "{}")
                 except json.JSONDecodeError:
                     args = {}
+                if self.privacy:                 # restore real values before the tool runs
+                    args = self.privacy.restore_obj(args)   # (and before the allowlist check)
                 self._emit("tool_call", {"tool": name, "args": args})
                 if name == "finish":
                     self._emit("session_end", {"summary": args.get("summary", "")})
@@ -155,11 +160,13 @@ class AgentSession:
                 result = execute_tool(name, args, self.engagement, self.handle_ask_human)
                 # PATCH 1: failure tracking now knows WHICH tool produced the result
                 self._track_failure(name, result)
+                content = self.privacy.scrub(result) if self.privacy else result
                 self.messages.append({"role": "tool", "tool_call_id": tc.id,
-                                      "content": result})
+                                      "content": content})
         else:
             self.messages.append({"role": "assistant", "content": msg.content or ""})
-            self._emit("model_message", {"text": (msg.content or "")[:500]})
+            text = self.privacy.restore(msg.content or "") if self.privacy else (msg.content or "")
+            self._emit("model_message", {"text": text[:500]})
 
     # PATCH 1: tool-aware failure tracking — only `run_command` results carry exit
     # codes; file writes / searches / answers must not count as "failures"
@@ -180,7 +187,10 @@ class AgentSession:
         resp = self.client.chat.completions.create(
             model=MODELS["loop"], messages=self.messages, temperature=0.3)
         self._track_cost(MODELS["loop"], resp.usage)
-        self._emit("session_end", {"summary": resp.choices[0].message.content})
+        summary = resp.choices[0].message.content
+        if self.privacy:
+            summary = self.privacy.restore(summary)
+        self._emit("session_end", {"summary": summary})
 
     def handle_ask_human(self, question: str) -> str:
         self._emit("ask_human", {"question": question})
@@ -198,8 +208,9 @@ class AgentSession:
 
     def _system_prompt(self):
         e = self.engagement
-        return SYSTEM_PROMPT.format(allowed_hosts=e["allowed_hosts"],
-                                    goal=e["goal"], targets=e["targets"])
+        p = SYSTEM_PROMPT.format(allowed_hosts=e["allowed_hosts"],
+                                 goal=e["goal"], targets=e["targets"])
+        return self.privacy.scrub(p) if self.privacy else p
 
     def _session_dir(self):
         name = self.engagement["engagement_name"].replace(" ", "_")

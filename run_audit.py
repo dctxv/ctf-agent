@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from agent.agent import AgentSession
 from agent.adapters import build_code_audit_engagement
+from agent.privacy import from_engagement
 from agent.tools import CONTAINER
 
 try:  # subprocess/semgrep output is UTF-8; don't let a cp1252 console crash on it
@@ -80,6 +81,8 @@ def main():
     ap.add_argument("--name")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--unattended", action="store_true", help="answer ask_human automatically (no prompts)")
+    ap.add_argument("--privacy", action="store_true",
+                    help="anonymize target identifiers before the model API")
     ap.add_argument("--config", default="auto", help="semgrep --config (default: auto)")
     ap.add_argument("--workspace", default="workspace")
     ap.add_argument("--max-steps", type=int, default=40)
@@ -99,7 +102,8 @@ def main():
         dep_scan_dry_run(eng)
         return
 
-    session = AgentSession(eng, auto_human if a.unattended else human_input, auto_learn=True)
+    session = AgentSession(eng, auto_human if a.unattended else human_input, auto_learn=True,
+                           privacy=from_engagement(eng) if a.privacy else None)
     try:
         session.run()
     except KeyboardInterrupt:

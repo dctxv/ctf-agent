@@ -3,6 +3,13 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Phase 5 privacy mode (target anonymization): `agent/privacy.py` replaces real hostnames,
+  IPs and emails with stable placeholders before anything reaches the model API, and restores
+  them before tools run - crucially BEFORE the allowlist check, so scope is enforced on real
+  values and privacy never widens it. Wired into `AgentSession` and the runners (`--privacy` on
+  main.py/run_ctfd.py/run_audit.py); local artifacts (events, reports) keep real values.
+  Verified E2E on c01 with privacy on: the message history sent to the API held only
+  placeholders (no real host), yet the agent still determined version 20.3.0 - $0.008, 7 steps.
 - Phase 4 dashboard (MVP): a FastAPI backend (`dashboard/server.py`) over the agent's saved
   sessions - `GET /api/sessions`, `/api/sessions/{id}/events`, and an SSE
   `/api/sessions/{id}/stream` that replays a session's events to mock a live feed - plus a
