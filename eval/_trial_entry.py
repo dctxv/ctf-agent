@@ -60,7 +60,11 @@ def main():
     budget = count("budget_hit")
     tool_seq = [e["data"].get("tool") for e in ev
                 if e.get("type") == "tool_call" and e.get("data", {}).get("tool")]
-    technique = prefix + " > ".join(list(dict.fromkeys(tool_seq))[:10])
+    summary = next((e["data"].get("summary", "") for e in reversed(ev)
+                    if e.get("type") == "session_end"), "")
+    technique = prefix + " > ".join(list(dict.fromkeys(tool_seq))[:8])
+    if summary:
+        technique += " | " + str(summary)[:220]   # the approach, not just tool names (flags scrubbed on store)
     out.write_text(json.dumps({
         "steps": session.steps,
         "technique": technique,
