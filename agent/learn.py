@@ -10,13 +10,13 @@ import os
 import re
 from pathlib import Path
 
-from openai import OpenAI
+from agent.llm import LLMClient
 
 MODEL = "deepseek-flash"  # cheap; this is summarization, not reasoning-heavy
 
 
 def _client():
-    return OpenAI(api_key=os.environ["DEEPSEEK_API_KEY"], base_url="https://api.deepseek.com")
+    return LLMClient()
 
 
 def _events_path(session_dir) -> Path:
@@ -86,7 +86,7 @@ def generate_learning(session_dir, client=None, model=MODEL) -> dict:
         steps="\n".join(f"- {s}" for s in info["steps"][:60]) or "(none recorded)",
         summary=(info["summary"] or "(no summary)")[:4000],
     )
-    resp = client.chat.completions.create(
+    resp = client.complete(
         model=model, messages=[{"role": "user", "content": prompt}], temperature=0.3)
     md = resp.choices[0].message.content or ""
 
@@ -150,7 +150,7 @@ def generate_client_report(session_dir, client=None, model=MODEL) -> dict:
         steps="\n".join(f"- {s}" for s in info["steps"][:60]) or "(none recorded)",
         summary=(info["summary"] or "(no summary)")[:4000],
     )
-    resp = client.chat.completions.create(
+    resp = client.complete(
         model=model, messages=[{"role": "user", "content": prompt}], temperature=0.3)
     md = resp.choices[0].message.content or ""
     out_dir = info["events_path"].parent

@@ -10,13 +10,13 @@ import os
 import re
 from pathlib import Path
 
-from openai import OpenAI
+from agent.llm import LLMClient
 
 MODEL = "deepseek-flash"
 
 
 def _client():
-    return OpenAI(api_key=os.environ["DEEPSEEK_API_KEY"], base_url="https://api.deepseek.com")
+    return LLMClient()
 
 
 def _code_window(src_dir, file, line, ctx=15):
@@ -62,7 +62,7 @@ def verify_finding(f, src_dir, client, model=MODEL):
                             description=f.get("description", ""), code_block=code_block)
     v = {}
     try:
-        r = client.chat.completions.create(
+        r = client.complete(
             model=model, messages=[{"role": "user", "content": prompt}], temperature=0.0)
         m = re.search(r"\{.*\}", r.choices[0].message.content or "", re.S)
         if m:

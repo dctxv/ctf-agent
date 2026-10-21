@@ -1,15 +1,9 @@
 import os, json
 from pathlib import Path
 from datetime import datetime
-from openai import OpenAI
 
 from agent.tools import TOOL_SCHEMAS, execute_tool
-
-# Update prices to current DeepSeek pricing when they change.
-PRICES = {"deepseek-flash":  {"in": 0.14,  "out": 0.28},
-          "deepseek-v4-pro": {"in": 0.435, "out": 0.87}}  # $ per 1M tokens
-# If the API rejects these model names, fall back to:
-#   "deepseek-chat" / "deepseek-reasoner"
+from agent.llm import LLMClient, PRICES
 
 MODELS = {"loop": "deepseek-flash", "escalate": "deepseek-v4-pro"}
 
@@ -64,8 +58,7 @@ class AgentSession:
             (self.artifact_dir / "events.jsonl").write_text("", encoding="utf-8")
         except Exception:
             self.artifact_dir = None
-        self.client = OpenAI(api_key=os.environ["DEEPSEEK_API_KEY"],
-                             base_url="https://api.deepseek.com")
+        self.llm = LLMClient()
         self.messages = []          # append-only (keeps prompt-prefix cache hits)
         self.events = []
         self._emit("session_start", engagement)
@@ -121,24 +114,9 @@ class AgentSession:
     # ---------------- one model turn ----------------
     def _model_call(self, model: str, thinking: bool = False):
         self.steps += 1
-        kwargs = dict(model=model, messages=self.messages,
-                     tools=TOOL_SCHEMAS, temperature=0.3, timeout=180)
-
-        if thinking:
-            kwargs["extra_body"] = {"thinking": {"type": "enabled"}}
-
-        try:
-            resp = self.client.chat.completions.create(**kwargs)
-        except Exception:
-            # graceful degrade: if the API rejects thinking mode (or its
-            # temperature interaction), retry without the extras
-            if thinking:
-                kwargs.pop("extra_body", None)
-                kwargs.pop("temperature", None)
-                resp = self.client.chat.completions.create(**kwargs)
-            else:
-                raise
-
+        resp = self.llm.complete(model=model, messages=self.messages,
+                                 tools=TOOL_SCHEMAS, temperature=0.3,
+                                 thinking=thinking, timeout=180)
         self._track_cost(model, resp.usage)
         msg = resp.choices[0].message
 
@@ -184,7 +162,7 @@ class AgentSession:
 
     def _force_summary(self, why: str):
         self.messages.append({"role": "user", "content": why})
-        resp = self.client.chat.completions.create(
+        resp = self.llm.complete(
             model=MODELS["loop"], messages=self.messages, temperature=0.3)
         self._track_cost(MODELS["loop"], resp.usage)
         summary = resp.choices[0].message.content
@@ -233,7 +211,7 @@ class AgentSession:
         # Best-effort: a learning failure must never break the finished session.
         try:
             from agent.learn import generate_learning
-            r = generate_learning(self.artifact_dir, client=self.client)
+            r = generate_learning(self.artifact_dir, client=self.llm)
             self._emit("learning_saved", {"flashcards": r["n_cards"], "path": r["learning_md"]})
         except Exception as e:
             self._emit("learning_error", {"error": str(e)[:200]})

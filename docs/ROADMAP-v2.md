@@ -103,9 +103,11 @@ are specific and verified, not stylistic.
    research, static code audit, defensive analysis, reproduction/remediation, education,
    coordinated disclosure. Network-level scope enforcement, isolation, auditability, human
    control as architectural requirements.
-6. **Model-agnostic intelligence (DeepSeek primary)** - a provider interface with role-based
-   routing (loop / escalate / verify / summarize), optional local inference, accurate cost
-   tracking, caching, context management.
+6. **Model-provider layer (DeepSeek only)** - a single provider interface with role-based
+   routing (loop / escalate / verify / summarize), accurate cost tracking, caching, context
+   management. Per operator direction the project runs on the DeepSeek API only; local
+   inference is out of scope (the interface keeps a future provider a contained change, but
+   none is built).
 7. **Research credibility and open-source adoption** - reproducible, leak-controlled, diverse,
    baseline-compared benchmarks with honest failure analysis.
 8. **Robust, scalable evaluation infrastructure (foundational)** - the first-class subsystem in
@@ -353,9 +355,9 @@ benchmark needs it.
 
 | Order | Milestone | Acceptance criteria |
 |---|---|---|
-| **M0** | Close the scope cage + Tier A bootstrap | Network-level egress: `curl example.com`, decimal/hex/IPv6 IPs, and `H=evil.com; curl http://$H/` all fail at the network layer for a narrow allowlist, proven by `tests/test_scope.py`. First Tier-A safety tests exist. |
-| **M1** | Eval subsystem skeleton (foundational) | Manifest registry + schema validation; outcome + failure-reason taxonomies; structured store with provenance; `LocalDockerRunner` with per-trial isolation; controller with trials/budget/resume; the 10 Juice Shop challenges migrated with strengthened verifiers; Tier B smoke set. `run_eval.py` still works as a wrapper; `results.csv` still exports. |
-| **M2** | Provider abstraction (DeepSeek primary) | One `LLMClient`; the three duplicated clients collapse; thinking-mode 400 handled; the same engagement runs on DeepSeek and on a local Ollama model by config flag; eval baseline reproduces within CI on DeepSeek. |
+| **M0** | Close the scope cage + Tier A bootstrap | Network-level egress: `curl example.com`, decimal/hex/IPv6 IPs, and `H=evil.com; curl http://$H/` all fail at the network layer for a narrow allowlist, proven by `tests/test_scope.py`. First Tier-A safety tests exist. DONE (32 tests; firewall live-verified; command-layer live today, kernel firewall engages for eval trial containers after the image rebuild that adds nftables). |
+| **M1** | Eval subsystem skeleton (foundational) | Manifest registry + schema validation; outcome + failure-reason taxonomies; structured store with provenance; `LocalDockerRunner` with per-trial isolation; controller with trials/budget/resume; the 10 Juice Shop challenges migrated with strengthened verifiers; Tier B smoke set. `run_eval.py` left working unchanged; a `results.csv`-format export is produced. DONE (20 tests; live-validated end to end on c01). |
+| **M2** | Provider layer (DeepSeek only) | One `LLMClient` with role routing; the three duplicated clients collapse; thinking-mode 400 fixed (stale reasoning_content stripped); DeepSeek stays the only provider (no local inference); a cheap live smoke confirms no regression. DONE. |
 | **M3** | Diverse Tier C/D challenges + baseline ablations | Challenges across >=3 categories beyond Juice Shop, split dev/validation/test; independent verifiers; baselines (raw model no-tools, single-tool-call) measured; a reproducible `BENCHMARK.md` with held-out generalization numbers. |
 | **M4** | Experience memory, proven on Tier D | Episodic store + hybrid retrieval; per-engagement privacy namespaces; `--no-memory` mode; an A/B on the held-out set showing memory-on vs memory-off deltas (reported honestly, including null/negative). |
 | **M5** | Eval + agent dashboard upgrade | Experiments/worker status, historical results, per-category solve rates with uncertainty, cost/latency comparisons, strategy comparisons, escalation effects, regression detection, config provenance, exportable + machine-readable reports; pause/resume/cancel; minimal auth before any exposure. |

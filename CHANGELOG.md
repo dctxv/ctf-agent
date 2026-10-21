@@ -12,6 +12,13 @@ All notable changes to the AI CTF & Pentest Copilot.
   default-drop egress firewall (nftables, iptables fallback) for evaluation trial containers,
   live-verified to drop out-of-scope traffic while allowing loopback; `Dockerfile` gains
   nftables/iptables. `tests/test_scope.py`: 32 Tier A safety tests.
+- M2 model-provider layer (`agent/llm.py`): a single `LLMClient` centralizes the DeepSeek
+  (OpenAI-compatible) client, role -> model routing (loop/escalate/verify/summarize), pricing,
+  and the thinking-mode handling that `agent.py`, `court.py`, and `learn.py` each hard-coded -
+  now all three route through it. Fixes a thinking-mode HTTP 400 by stripping stale
+  `reasoning_content` from history before each call. DeepSeek stays the only provider (local
+  inference is out of scope); the interface keeps a future provider a contained change. Live
+  smoke: c01 solved via the refactored path at $0.0053, no regression. `tests/test_llm.py`: 6 tests.
 - M1 evaluation subsystem (`eval/`): versioned, schema-validated challenge manifests
   (`eval/manifests/`), orthogonal Outcome + FailureReason taxonomies, independent verifiers
   (stronger than substring: JWT-claim checks, min-count, failure-phrase rejection), a
