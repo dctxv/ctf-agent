@@ -108,3 +108,22 @@ raw-model by category: crypto 2/2, forensics 2/2, reverse 1/2.
   The agent's advantage should widen on challenges that genuinely require running code - large
   inputs, brute force, real exploitation - rather than one-shot reasoning, which these are not.
   Measuring that is future work.
+
+---
+
+## Adaptive scaling (M6): cost vs success across profiles
+
+Same held-out generated set, three profiles, 2 runs per challenge each (n=6 per profile).
+
+| profile | solved | mean $ | mean steps | escalations | what it is |
+|---|---|---|---|---|---|
+| economy | 6/6 (100%) | 0.0027 | 6.3 | 0 | flash only, no escalation, tight budget |
+| balanced | 6/6 (100%) | 0.0043 | 7.7 | 2 | flash + escalate to the reasoning model after 2 failures |
+| maximum | 6/6 (100%) | 0.0090 | 6.8 | 6 | reasoning model in the loop, escalate on first failure |
+
+**Pareto-efficient: economy.** All three profiles solve 100%, so the cheapest wins outright -
+balanced costs 1.6x and maximum 3.3x economy for identical success. Escalation did fire (2 and 6
+times), but on challenges with no headroom it only adds cost; the reasoning model and aggressive
+escalation earn their keep only where the cheap model genuinely fails and a stronger model
+recovers the case - which these easy challenges are not. Expect the Pareto front to move toward
+balanced/maximum on harder, code-requiring challenges; measuring that is future work.
