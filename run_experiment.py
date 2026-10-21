@@ -38,6 +38,8 @@ def main():
     ap.add_argument("--no-reset", action="store_true")
     ap.add_argument("--no-resume", action="store_true")
     ap.add_argument("--memory", action="store_true", help="enable experience memory (namespaced to the experiment)")
+    ap.add_argument("--baselines", action="store_true",
+                    help="run no-tools raw-model + single-step baselines alongside the full agent")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -70,8 +72,15 @@ def main():
         cfg["name"] = "flash-memory"
         cfg["memory"] = "on"
         cfg["memory_namespace"] = a.experiment
+    configs = [cfg]
+    if a.baselines:
+        configs = [
+            {"name": "agent-full", "model": "deepseek-flash", "policy": "loop-escalate"},
+            {"name": "agent-1step", "model": "deepseek-flash", "max_steps": 1},
+            {"name": "raw-model", "model": "deepseek-flash", "mode": "raw-model"},
+        ]
     summary = controller.run_experiment(
-        experiment_id=a.experiment, manifests=sel, configs=[cfg], runner=runner,
+        experiment_id=a.experiment, manifests=sel, configs=configs, runner=runner,
         runs=a.runs, global_cost_cap=a.cost_cap, resume=not a.no_resume,
         on_trial=lambda r: print(f"  [{r['challenge_id']} r{r['run_index']}] "
                                  f"{r['outcome']} ${r['cost_usd']} - {str(r['detail'])[:60]}"))

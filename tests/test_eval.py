@@ -240,5 +240,32 @@ class TestLocalDockerRunnerOrchestration(unittest.TestCase):
         self.assertIn("tear", calls)
 
 
+class TestRawModelBaseline(unittest.TestCase):
+    """The no-tools baseline path: no container is provisioned, the injected raw
+    runner produces the answer, and it is verified like any trial."""
+    def test_raw_model_skips_provision(self):
+        import json
+        from eval.runner import LocalDockerRunner
+        tmp = tempfile.mkdtemp()
+        calls = []
+
+        def raw(eng, ws):
+            slug = Path(ws).name
+            key = json.loads((Path("eval/keys") / f"{slug}.json").read_text())["key"]
+            (Path(ws) / "evidence").mkdir(parents=True, exist_ok=True)
+            (Path(ws) / "evidence" / "flag.txt").write_text(key, encoding="utf-8")
+            return {"steps": 1, "cost_usd": 0.004, "technique": "raw"}
+
+        man = registry.select(registry.load_manifests(), ids={"gen-xor-flag"})[0]
+        r = LocalDockerRunner(workspace_root=tmp, provision=lambda *a: calls.append("prov"),
+                              teardown=lambda *a: calls.append("tear"),
+                              apply_firewall=lambda *a: None, raw_runner=raw)
+        res = r.run_trial(man, run_index=1, experiment_id="e",
+                          config={"name": "raw-model", "mode": "raw-model"})
+        self.assertEqual(res["outcome"], "verified_success")
+        self.assertEqual(res["container"], "(raw-model)")
+        self.assertNotIn("prov", calls)   # no container for the no-tools baseline
+
+
 if __name__ == "__main__":
     unittest.main()
