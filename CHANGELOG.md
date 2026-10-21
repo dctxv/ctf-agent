@@ -21,6 +21,15 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- M8 offline optimization loop (`agent/optimize.py` + `run_optimize.py`): reads the eval store
+  (outcome/cost metadata ONLY - never flags, keys, or evidence, asserted by a contamination check),
+  compares the configs that ran on a challenge set, and writes human-reviewable policy PROPOSALS to
+  `docs/OPTIMIZATION.md`. It changes nothing - no config, no code - and needs human approval to act
+  on. On the held-out generated set it synthesizes the session's experiments automatically:
+  recommends `economy` as the default (cheapest at 100%), flags every costlier config (memory,
+  scaling, multi-agent, single-agent, etc.) as wasteful (1.1x-3.3x cost, no benefit), and surfaces
+  the capability trade-offs (1-step 0%, raw-model 83%) as human-review decisions. `tests/test_optimize.py`:
+  7 tests. (Regression/rollback: `run_report.py --regression BEFORE AFTER`.)
 - M7 multi-agent orchestration (`agent/multiagent.py`): a bounded supervisor + specialist design -
   one supervisor routing call picks the best specialist (crypto / reverse / forensics / web / recon /
   code-audit) with a one-line strategy, and that specialist runs the normal tool loop with its
