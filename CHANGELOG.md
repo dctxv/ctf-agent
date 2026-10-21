@@ -19,6 +19,13 @@ All notable changes to the AI CTF & Pentest Copilot.
   `reasoning_content` from history before each call. DeepSeek stays the only provider (local
   inference is out of scope); the interface keeps a future provider a contained change. Live
   smoke: c01 solved via the refactored path at $0.0053, no regression. `tests/test_llm.py`: 6 tests.
+- Evaluation reporting layer (`eval/report.py` + `run_report.py`): turns the structured store
+  into verified solve-rates with Wilson-score confidence intervals (so small-n results show
+  honestly wide bounds), per-category / per-challenge / per-config breakdowns, cost/step/latency
+  aggregates, failure-reason distributions, and a per-challenge regression diff between two
+  experiments. Emits a human `BENCHMARK.md` and a machine-readable JSON. Infra errors are
+  excluded from solve-rate denominators; the report auto-flags dev-only or single-category
+  coverage so a number is never mistaken for generalization. `tests/test_report.py`: 10 tests.
 - M1 evaluation subsystem (`eval/`): versioned, schema-validated challenge manifests
   (`eval/manifests/`), orthogonal Outcome + FailureReason taxonomies, independent verifiers
   (stronger than substring: JWT-claim checks, min-count, failure-phrase rejection), a

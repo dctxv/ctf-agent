@@ -16,3 +16,5 @@ __pycache__/
 *.sqlite
 eval/results.sqlite
 eval/results.csv
+eval/BENCHMARK.md
+eval/benchmark.json
