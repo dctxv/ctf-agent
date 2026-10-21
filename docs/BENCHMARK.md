@@ -83,3 +83,28 @@ This is the honest answer the A/B exists to give: on easy challenges the model a
 stored experience does not help. Whether memory helps where it should - harder challenges, or a
 non-obvious trick that recurs across instances - is untested here and is future work. M4 delivers
 the mechanism and the measurement, not a capability claim.
+
+---
+
+## Baseline ablations (M3): how much is the agent vs the model?
+
+Same held-out generated set, three configs, 2 runs per challenge each (n=6 per config).
+
+| config | solved | mean steps | mean $ | what it is |
+|---|---|---|---|---|
+| agent-full | 6/6 (100%) | 6.8 | 0.003 | the full agentic tool loop |
+| agent-1step | 0/6 (0%) | 1.0 | 0.001 | a one-step budget (single tool call) |
+| raw-model (no tools) | 5/6 (83%) | 1 call | 0.003 | the bare model, file contents handed in inline, no code execution |
+
+raw-model by category: crypto 2/2, forensics 2/2, reverse 1/2.
+
+**Findings.**
+- The multi-step loop is necessary for the task shape: a one-step budget solves nothing - you
+  cannot read the file, process it, and write the answer in a single action.
+- But the no-tools model, given the raw data in one call, already solves 5/6. On these tractable,
+  self-contained challenges much of the success is the model's own reasoning, not the agent
+  scaffolding; the loop adds reliability (100% vs 83%) and recovers one case the bare model missed.
+- This is the honest value of a baseline: it stops us over-crediting the harness on easy problems.
+  The agent's advantage should widen on challenges that genuinely require running code - large
+  inputs, brute force, real exploitation - rather than one-shot reasoning, which these are not.
+  Measuring that is future work.

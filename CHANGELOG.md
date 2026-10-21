@@ -42,7 +42,10 @@ All notable changes to the AI CTF & Pentest Copilot.
   generalization run (`docs/BENCHMARK.md`): 9/9 (100%, 95% CI 70-100%) across the three
   categories, 3 runs each, $0.033 total. Baseline ablations added (`run_experiment.py --baselines`):
   a no-tools raw-model arm (one model call, file contents inline, no container, no tool loop) and a
-  single-step arm, run as separate configs and compared per config in `docs/BENCHMARK.md`. Still
+  single-step arm, run as separate configs and compared per config. Result: agent-full 6/6 (100%)
+  vs single-step 0/6 (the loop is needed for the read-process-write shape) vs no-tools raw-model
+  5/6 (83%) - on these easy challenges the bare model already does most of the work; the agent's
+  edge should widen on code-requiring challenges (future work). See `docs/BENCHMARK.md`. Still
   pending in M3: integrating code-audit repos as dev/validation challenges.
 - M2 model-provider layer (`agent/llm.py`): a single `LLMClient` centralizes the DeepSeek
   (OpenAI-compatible) client, role -> model routing (loop/escalate/verify/summarize), pricing,
