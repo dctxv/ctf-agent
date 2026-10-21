@@ -22,7 +22,7 @@ def build_matrix(manifests, configs, runs):
 def run_experiment(*, experiment_id, manifests, configs, runner, runs=1,
                    store=None, store_path="eval/results.sqlite",
                    global_cost_cap=None, randomize=True, seed=0, resume=True,
-                   export_csv="results.csv", on_trial=None):
+                   export_csv="eval/results.csv", on_trial=None):
     st = store or store_mod.Store(store_path)
     trials = build_matrix(manifests, configs, runs)
     if randomize:

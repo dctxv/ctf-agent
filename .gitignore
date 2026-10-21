@@ -10,6 +10,9 @@ __pycache__/
 # Runtime artifacts (shared Docker volume: evidence, loot, sessions, pocs)
 /workspace/
 
-# Evaluation subsystem: structured result store (results.csv stays the export)
+# Evaluation subsystem: the SQLite store is the source of truth; the CSV is a
+# derived per-experiment export (the repo-root results.csv stays owned by the
+# legacy run_eval.py / validate_github.py harness).
 *.sqlite
 eval/results.sqlite
+eval/results.csv
