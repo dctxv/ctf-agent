@@ -8,12 +8,19 @@ Run:  python dashboard/server.py      (or: uvicorn dashboard.server:app --port 8
 """
 import asyncio
 import json
+import subprocess
+import sys
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))  # so we can import agent.* when run as a script
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
-ROOT = Path(__file__).resolve().parent.parent
+from agent.adapters import github_engagement_name
+from agent.findings import load_findings
+
 SESSIONS = (ROOT / "workspace" / "sessions").resolve()
 
 app = FastAPI(title="CTF Agent Dashboard")
@@ -142,6 +149,46 @@ async def _replay(path: Path):
         yield f"data: {json.dumps(e)}\n\n"
         await asyncio.sleep(0.2)
     yield "event: end\ndata: {}\n\n"
+
+
+@app.post("/api/github/audit")
+async def api_github_audit(req: Request):
+    """Launch a file-only audit of a github.com repo (host-side clone + run_audit).
+    Returns the session id; progress is on /stream, results on /findings. Localhost
+    only, single operator (invariant #5); the URL is validated to github.com/owner/repo."""
+    body = await req.json()
+    url = (body or {}).get("url", "")
+    try:
+        max_steps = max(1, min(int((body or {}).get("max_steps", 40)), 80))
+    except (TypeError, ValueError):
+        max_steps = 40
+    try:
+        name = github_engagement_name(url)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    # clear any prior run of this session so the UI waits for the fresh run,
+    # not a stale finished one with the same id.
+    old = SESSIONS / name
+    for fn in ("events.jsonl", "events.json"):
+        try:
+            (old / fn).unlink()
+        except (FileNotFoundError, OSError):
+            pass
+    subprocess.Popen(
+        [sys.executable, str(ROOT / "run_audit.py"), "--github", url,
+         "--unattended", "--max-steps", str(max_steps)],
+        cwd=str(ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {"session_id": name, "status": "launching"}
+
+
+@app.get("/api/sessions/{sid:path}/findings")
+def api_findings(sid: str):
+    events, _ = _read_events(_sdir(sid))
+    audit = next((e.get("data", {}).get("_audit") for e in events
+                  if e.get("type") == "session_start"), None)
+    if not audit or "findings" not in audit:
+        return JSONResponse([])
+    return JSONResponse(load_findings((ROOT / "workspace" / audit["findings"]).parent))
 
 
 @app.get("/")

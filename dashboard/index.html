@@ -5,57 +5,105 @@
 <title>CTF Agent Dashboard</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 0; display: flex; height: 100vh; }
-  #list { width: 340px; border-right: 1px solid #ddd; overflow: auto; padding: 8px; box-sizing: border-box; }
-  #feed { flex: 1; overflow: auto; padding: 10px; background: #0b0f14; color: #cfe3f0; box-sizing: border-box; }
-  h1 { font-size: 15px; margin: 6px 8px; }
+  #list { width: 340px; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+  #tabs { display: flex; border-bottom: 1px solid #ddd; }
+  .tab { flex: 1; padding: 9px; text-align: center; cursor: pointer; background: #f6f6f6; border: none; font: inherit; }
+  .tab.active { background: #fff; font-weight: 600; border-bottom: 2px solid #3a6ea5; }
+  #panes { flex: 1; overflow: auto; padding: 8px; box-sizing: border-box; }
   .s { padding: 6px 8px; border: 1px solid #e3e3e3; border-radius: 6px; margin: 5px 0; cursor: pointer; }
   .s:hover { background: #f2f6ff; }
   .s .g { font-size: 12px; color: #666; margin-top: 2px; }
   .badge { float: right; font-size: 11px; font-weight: 600; }
-  #hdr { color: #9ab; padding: 4px 2px 8px; border-bottom: 1px solid #223; margin-bottom: 6px; }
+  #repos input { width: 100%; box-sizing: border-box; padding: 6px; margin: 4px 0; font: inherit; }
+  #repos button { padding: 7px 14px; font: inherit; cursor: pointer; }
+  #right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #hdr { padding: 6px 10px; border-bottom: 1px solid #223; color: #9ab; background: #0b0f14; }
+  #feed { flex: 1; overflow: auto; padding: 8px; background: #0b0f14; color: #cfe3f0; }
   .ev { font-family: ui-monospace, monospace; font-size: 12px; margin: 2px 0; white-space: pre-wrap; word-break: break-word; }
   .t { display: inline-block; min-width: 130px; color: #8bd; }
   .tool_call .t { color: #ffd27f; }
   .session_end .t, .learning_saved .t { color: #86f09a; }
-  .escalation .t, .budget_hit .t, .learning_error .t { color: #ff8a8a; }
+  .escalation .t, .budget_hit .t { color: #ff8a8a; }
   .ask_human .t { color: #d79cff; }
   .cost_update .t { color: #8aa0b3; }
+  #findings { padding: 8px; background: #0e141b; max-height: 45%; overflow: auto; border-top: 1px solid #223; }
+  .fc { border-left: 4px solid #888; background: #11181f; color: #dfeaf2; margin: 5px 0; padding: 6px 9px; border-radius: 0 5px 5px 0; }
+  .fc .h { font-weight: 600; }
+  .fc .m { font-size: 12px; color: #9ab; margin-top: 2px; }
+  .fc .d { font-size: 12px; color: #c6d2dc; margin-top: 3px; }
+  .sev-critical { border-left-color: #e5484d; }
+  .sev-high { border-left-color: #f5a524; }
+  .sev-medium { border-left-color: #e3d34a; }
+  .sev-low { border-left-color: #4aa5e3; }
+  .sev-info { border-left-color: #888; }
 </style>
 </head>
 <body>
-  <div id="list"><h1>Sessions</h1><div id="sessions">loading…</div></div>
-  <div id="feed"><div id="hdr">pick a session →</div><div id="events"></div></div>
+  <div id="list">
+    <div id="tabs">
+      <button class="tab active" id="tab-sessions" onclick="showTab('sessions')">Sessions</button>
+      <button class="tab" id="tab-repos" onclick="showTab('repos')">Repos</button>
+    </div>
+    <div id="panes">
+      <div id="sessions">loading…</div>
+      <div id="repos" style="display:none">
+        <div style="font-size:13px;color:#555;margin:4px 0">Audit a public GitHub repo (file-only static audit; cloned host-side, never executed):</div>
+        <input id="repourl" placeholder="https://github.com/owner/repo">
+        <input id="repomax" type="number" value="40" min="5" max="80" title="max steps (cost scales with steps)">
+        <button onclick="startAudit()">Audit</button>
+        <div id="repostatus" style="font-size:12px;color:#a60;margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+  <div id="right">
+    <div id="hdr">pick a session, or audit a repo &rarr;</div>
+    <div id="feed"><div id="events"></div></div>
+    <div id="findings"></div>
+  </div>
 <script>
-let es = null;
+let es = null, pollTimer = null;
+
+function showTab(name) {
+  document.getElementById('sessions').style.display = name === 'sessions' ? 'block' : 'none';
+  document.getElementById('repos').style.display = name === 'repos' ? 'block' : 'none';
+  document.getElementById('tab-sessions').classList.toggle('active', name === 'sessions');
+  document.getElementById('tab-repos').classList.toggle('active', name === 'repos');
+}
+
+function encId(id) { return id.split('/').map(encodeURIComponent).join('/'); }
 
 async function loadSessions() {
   const el = document.getElementById('sessions');
   try {
-    const r = await fetch('/api/sessions');
-    const list = await r.json();
-    el.innerHTML = '';
-    if (!list.length) { el.textContent = 'no sessions found'; return; }
+    const list = await (await fetch('/api/sessions')).json();
+    el.innerHTML = list.length ? '' : 'no sessions found';
     for (const x of list) {
       const d = document.createElement('div');
       d.className = 's';
-      const color = x.status === 'finished' ? '#2a8a2a' : '#b5700a';
+      const color = x.status === 'finished' ? '#2a8a2a' : (x.status === 'running' ? '#b5700a' : '#777');
       d.innerHTML = `<span class="badge" style="color:${color}">${x.status}</span><b>${esc(x.id)}</b>`
         + `<div class="g">${x.events} events · $${x.cost_usd} · ${esc(x.goal || '')}</div>`;
-      d.onclick = () => stream(x.id);
+      d.onclick = () => openSession(x.id);
       el.appendChild(d);
     }
   } catch (e) { el.textContent = 'failed to load sessions'; }
+}
+
+function openSession(id) {
+  showFindings(id);   // show cards immediately if it is a finished audit
+  stream(id);
 }
 
 function stream(id) {
   if (es) es.close();
   document.getElementById('events').innerHTML = '';
   document.getElementById('hdr').textContent = '▶ ' + id + '  (streaming)';
-  es = new EventSource('/api/sessions/' + encodeURIComponent(id).replace(/%2F/g, '/') + '/stream');
+  es = new EventSource('/api/sessions/' + encId(id) + '/stream');
   es.onmessage = (m) => { try { add(JSON.parse(m.data)); } catch (e) {} };
   es.addEventListener('end', () => {
     document.getElementById('hdr').textContent = '■ ' + id + '  (done)';
     es.close();
+    showFindings(id);
   });
   es.onerror = () => { if (es) es.close(); };
 }
@@ -65,16 +113,68 @@ function add(e) {
   d.className = 'ev ' + (e.type || '');
   let data = JSON.stringify(e.data);
   if (data && data.length > 220) data = data.slice(0, 220) + '…';
-  const ts = (e.ts || '').slice(11, 19);
-  d.innerHTML = `<span style="color:#556">${ts}</span> <span class="t">${esc(e.type)}</span> ${esc(data)}`;
+  d.innerHTML = `<span style="color:#556">${(e.ts || '').slice(11, 19)}</span> <span class="t">${esc(e.type)}</span> ${esc(data)}`;
   const f = document.getElementById('events');
   f.appendChild(d);
   f.scrollTop = f.scrollHeight;
 }
 
+async function showFindings(id) {
+  const box = document.getElementById('findings');
+  box.innerHTML = '';
+  try {
+    const fs = await (await fetch('/api/sessions/' + encId(id) + '/findings')).json();
+    if (!fs.length) return;
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'color:#9ab;font-size:12px;margin-bottom:4px';
+    hdr.textContent = `findings (${fs.length}), most severe first`;
+    box.appendChild(hdr);
+    for (const f of fs) {
+      const sev = String(f.severity || 'info').toLowerCase();
+      const c = document.createElement('div');
+      c.className = 'fc sev-' + sev;
+      c.innerHTML = `<div class="h">${esc(sev.toUpperCase())} · ${esc(f.title || '')}</div>`
+        + `<div class="m">${esc(f.file || '')}${f.line ? ':' + esc(f.line) : ''} · ${esc(f.cwe || '')} · conf ${esc(f.confidence || '?')}${f.poc ? ' · ' + esc(f.poc) : ''}</div>`
+        + (f.description ? `<div class="d">${esc(f.description)}</div>` : '');
+      box.appendChild(c);
+    }
+  } catch (e) {}
+}
+
+async function startAudit() {
+  const url = document.getElementById('repourl').value.trim();
+  const max_steps = parseInt(document.getElementById('repomax').value) || 40;
+  const st = document.getElementById('repostatus');
+  if (!/^https:\/\/github\.com\/[^/]+\/[^/]+/.test(url)) { st.textContent = 'enter a https://github.com/owner/repo URL'; return; }
+  st.textContent = 'launching…';
+  let id;
+  try {
+    const r = await fetch('/api/github/audit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, max_steps }) });
+    if (!r.ok) { st.textContent = 'error: ' + (await r.text()); return; }
+    id = (await r.json()).session_id;
+  } catch (e) { st.textContent = 'request failed'; return; }
+  st.textContent = 'cloning + starting ' + id + ' …';
+  document.getElementById('hdr').textContent = '⏳ ' + id + '  (cloning + starting)';
+  document.getElementById('events').innerHTML = '';
+  document.getElementById('findings').innerHTML = '';
+  if (pollTimer) clearInterval(pollTimer);
+  let tries = 0;
+  pollTimer = setInterval(async () => {
+    tries++;
+    try {
+      const l = await (await fetch('/api/sessions')).json();
+      if (l.some(s => s.id === id)) { clearInterval(pollTimer); st.textContent = 'streaming ' + id; loadSessions(); stream(id); }
+    } catch (e) {}
+    if (tries > 60) { clearInterval(pollTimer); st.textContent = 'timed out waiting for the session to start'; }
+  }, 1500);
+}
+
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
 
 loadSessions();
+setInterval(loadSessions, 5000);  // keep statuses fresh (running -> finished)
 </script>
 </body>
 </html>

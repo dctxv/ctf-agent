@@ -10,7 +10,14 @@ All notable changes to the AI CTF & Pentest Copilot.
   written incrementally so it survives the step budget, with a tolerant `agent/findings.py`
   loader. Verified on dvpwa: 14 findings (SQLi, XSS, broken access control, weak hashing,
   vulnerable deps, etc.) for ~$0.21. Includes a Windows-safe clone overwrite (git read-only
-  `.git` packs broke `shutil.rmtree`). Dashboard "Repos" tab + disclosure export are next.
+  `.git` packs broke `shutil.rmtree`).
+- Dashboard "Repos" tab: paste a github.com URL to launch a file-only audit from the browser.
+  `POST /api/github/audit` clones host-side + spawns `run_audit.py --github` as a subprocess;
+  the agent's live `events.jsonl` means the existing `/stream` shows progress with no new
+  streaming code; `GET /.../findings` + `agent/findings.py` render severity-sorted finding
+  cards. Clears a prior same-id run so the UI follows the fresh one, not a stale finished
+  session. Localhost/single-operator; the URL is validated to github.com/owner/repo.
+  Responsible-disclosure export is next.
 - Phase 5 privacy mode (target anonymization): `agent/privacy.py` replaces real hostnames,
   IPs and emails with stable placeholders before anything reaches the model API, and restores
   them before tools run - crucially BEFORE the allowlist check, so scope is enforced on real

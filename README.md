@@ -50,7 +50,9 @@ open-source app; see the honest limitations below before pointing it at anything
   key-concept notes, and flashcards, and optionally a client-style pentest report. Runs
   automatically at the end of real engagements.
 - **Dashboard (`dashboard/`).** A FastAPI + SSE web view: a session list and a live event
-  feed. A running engagement streams its events in real time; finished sessions replay.
+  feed. A running engagement streams its events in real time; finished sessions replay. A
+  "Repos" tab launches a GitHub repo audit from the browser and renders severity-sorted
+  finding cards from `findings.json`.
 - **Privacy mode (`--privacy`).** Anonymizes target hostnames, IPs, and emails before
   anything reaches the model API, and restores them before tools run (and before the
   allowlist check, so scope is always enforced on real values).

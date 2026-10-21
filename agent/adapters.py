@@ -220,6 +220,14 @@ def clone_github(url, workspace=".", depth=1):
     return dest, f"{owner}/{repo}"
 
 
+def github_engagement_name(url):
+    """The engagement/session name a github audit of `url` will use (no clone)."""
+    m = _GH_RE.match((url or "").strip())
+    if not m:
+        raise ValueError(f"not a github.com repo URL: {url!r}")
+    return f"audit-{m.group(1)}-{m.group(2)}".lower()
+
+
 def build_github_audit_engagement(url, *, workspace=".", max_steps=40, max_cost_usd=1.0):
     dest, slug = clone_github(url, workspace=workspace)
     eng = build_code_audit_engagement(dest, name=slug.replace("/", "-").lower(),
