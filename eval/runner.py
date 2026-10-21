@@ -202,13 +202,29 @@ class LocalDockerRunner(Runner):
             self._apply_firewall = lambda c, hosts: net.apply_egress_firewall(c, hosts, docker=self.docker)
 
     def run_trial(self, manifest, *, run_index, experiment_id, config):
-        eng = dict(registry.load_engagement(manifest))
         slug = _slug(experiment_id, manifest["id"], f"r{run_index}")
         cname = f"evalbox-{slug}"[:60]
         ws_host = self.workspace_root / slug
         if ws_host.exists():
             shutil.rmtree(ws_host, ignore_errors=True)
         (ws_host / "evidence").mkdir(parents=True, exist_ok=True)
+
+        # generated challenge (randomized, key kept host-side) vs static challenge file
+        if manifest.get("generator"):
+            from eval.generators import get_generator
+            gen = get_generator(manifest["generator"]["name"])
+            res = gen.generate(ws_host, f"{experiment_id}:{manifest['id']}:r{run_index}")
+            eng = dict(res["engagement"])
+            kdir = ROOT / "eval" / "keys"
+            kdir.mkdir(parents=True, exist_ok=True)
+            (kdir / f"{slug}.json").write_text(
+                json.dumps({"challenge": manifest["id"], "run": run_index, "key": res["key"]}),
+                encoding="utf-8")   # host-side only, never mounted into the container
+            verifier_spec = {**manifest["verifier"], "_expected": res["key"]}
+        else:
+            eng = dict(registry.load_engagement(manifest))
+            verifier_spec = manifest["verifier"]
+
         eng["workspace"] = str(ws_host)
         eng["container"] = cname
         if "max_steps" in config:
@@ -226,7 +242,7 @@ class LocalDockerRunner(Runner):
             metrics = self._agent_runner(eng, config, manifest, run_index, ws_host,
                                          cname, self.docker, self.wall_clock_s) or {}
             metrics.setdefault("duration_s", round(time.time() - t0, 2))
-            outcome, reason, detail = verifier.verify(manifest["verifier"], ws_host)
+            outcome, reason, detail = verifier.verify(verifier_spec, ws_host)
             return _result(manifest, run_index=run_index, experiment_id=experiment_id,
                            config=config, outcome=outcome, reason=reason, detail=detail,
                            metrics=metrics, workspace=str(ws_host), container=cname,

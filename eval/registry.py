@@ -10,8 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_VERSION = 1
-_REQUIRED = {"schema_version", "id", "version", "category", "tier", "dataset",
-             "challenge", "verifier"}
+_REQUIRED = {"schema_version", "id", "version", "category", "tier", "dataset", "verifier"}
 _VALID_TIERS = {"A", "B", "C", "D", "E"}
 _VALID_DATASETS = {"dev", "validation", "test"}
 
@@ -26,7 +25,9 @@ def _validate(m, src):
         raise ValueError(f"{src}: bad tier {m['tier']!r} (expected one of {sorted(_VALID_TIERS)})")
     if m["dataset"] not in _VALID_DATASETS:
         raise ValueError(f"{src}: bad dataset {m['dataset']!r}")
-    if not (ROOT / m["challenge"]).exists():
+    if not m.get("challenge") and not m.get("generator"):
+        raise ValueError(f"{src}: manifest '{m['id']}' needs 'challenge' or 'generator'")
+    if m.get("challenge") and not (ROOT / m["challenge"]).exists():
         raise ValueError(f"{src}: challenge file not found: {m['challenge']}")
     if "path" not in (m["verifier"] or {}):
         raise ValueError(f"{src}: verifier for '{m['id']}' needs a 'path'")

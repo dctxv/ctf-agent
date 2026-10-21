@@ -84,6 +84,13 @@ def verify(spec, workspace_dir):
     if spec.get("type") == "jwt_contains":
         payload = _find_jwt_payload(content)
         checks.append(("jwt_contains", bool(payload) and spec["value"] in payload))
+    if spec.get("type") == "flag_from_key":
+        # `_expected` is injected host-side by the runner from the hidden key; it is
+        # never present in the agent's workspace, preserving oracle isolation.
+        expected = spec.get("_expected")
+        if not expected:
+            return Outcome.INCONCLUSIVE, FailureReason.CONFIGURATION, "no expected key for flag_from_key"
+        checks.append(("flag_match", expected in content))
 
     failed = [name for name, ok in checks if not ok]
     if failed:

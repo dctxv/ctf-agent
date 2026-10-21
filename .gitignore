@@ -18,3 +18,6 @@ eval/results.sqlite
 eval/results.csv
 eval/BENCHMARK.md
 eval/benchmark.json
+
+# Trusted answer keys for generated challenges (never mounted into the agent)
+eval/keys/

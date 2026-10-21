@@ -1,0 +1,35 @@
+[
+  {
+    "schema_version": 1,
+    "id": "gen-xor-flag",
+    "version": 1,
+    "category": "crypto",
+    "tier": "D",
+    "dataset": "test",
+    "note": "Randomized single-byte XOR; flag is random per instance (leak-controlled).",
+    "generator": {"name": "xor_flag"},
+    "verifier": {"path": "evidence/flag.txt", "type": "flag_from_key"}
+  },
+  {
+    "schema_version": 1,
+    "id": "gen-layered-encoding",
+    "version": 1,
+    "category": "reverse",
+    "tier": "D",
+    "dataset": "test",
+    "note": "Randomized base64/hex layering; flag is random per instance.",
+    "generator": {"name": "layered_encoding"},
+    "verifier": {"path": "evidence/flag.txt", "type": "flag_from_key"}
+  },
+  {
+    "schema_version": 1,
+    "id": "gen-buried-flag",
+    "version": 1,
+    "category": "forensics",
+    "tier": "D",
+    "dataset": "test",
+    "note": "Randomized flag buried in a random binary blob; recoverable via strings.",
+    "generator": {"name": "buried_flag"},
+    "verifier": {"path": "evidence/flag.txt", "type": "flag_from_key"}
+  }
+]

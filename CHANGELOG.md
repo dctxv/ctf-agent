@@ -18,6 +18,15 @@ All notable changes to the AI CTF & Pentest Copilot.
   per-category / per-challenge tables, and the honesty caveats - straight from the structured
   store. Localhost, read-only. `.claude/launch.json` added so the dashboard starts with one
   command. Verified live in the browser against the smoke experiments.
+- M3 generated challenges (`eval/generators/`): randomized, auto-verifiable, leak-controlled
+  challenges in three new categories beyond web - crypto (single-byte XOR), reverse (layered
+  base64/hex), forensics (flag buried in a binary blob). Each instance's FLAG is random (seeded
+  by experiment:challenge:run), so the model cannot have memorized it - true generalization
+  probes, not recall. The answer key is written host-side (`eval/keys/`, gitignored) and injected
+  into the verifier only at check time, never into the agent's container (oracle isolation). The
+  registry accepts generator manifests (no static challenge file); the runner stages the instance,
+  records the key, and verifies by exact match. Verified live: the XOR challenge solved end to end.
+  `tests/test_generators.py`: 13 tests.
 - M2 model-provider layer (`agent/llm.py`): a single `LLMClient` centralizes the DeepSeek
   (OpenAI-compatible) client, role -> model routing (loop/escalate/verify/summarize), pricing,
   and the thinking-mode handling that `agent.py`, `court.py`, and `learn.py` each hard-coded -

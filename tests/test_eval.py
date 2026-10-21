@@ -20,9 +20,9 @@ def _write(ws, rel, text):
 
 
 class TestRegistry(unittest.TestCase):
-    def test_loads_ten(self):
+    def test_loads_all(self):
         ms = registry.load_manifests()
-        self.assertEqual(len(ms), 10)
+        self.assertEqual(len(ms), 13)  # 10 Juice Shop + 3 generated
 
     def test_ids_unique_and_challenges_exist(self):
         ms = registry.load_manifests()
