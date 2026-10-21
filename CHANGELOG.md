@@ -3,6 +3,23 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Roadmap v2 (`docs/ROADMAP-v2.md`): consolidates the assessment, the foundational evaluation
+  subsystem, and milestones M0-M8. DeepSeek stays the primary provider.
+- M0 scope hardening: `agent/tools.py` `extract_hosts` now normalizes decimal/hex/IPv6 IP
+  encodings and parses `user@host` and `nc/telnet HOST PORT`; `run_command` fails closed for a
+  network tool whose destination is unresolvable or built at runtime - closing the scheme-less
+  `curl example.com`, decimal-IP, and `$VAR`/`$()` allowlist bypasses. New `agent/net.py` adds a
+  default-drop egress firewall (nftables, iptables fallback) for evaluation trial containers,
+  live-verified to drop out-of-scope traffic while allowing loopback; `Dockerfile` gains
+  nftables/iptables. `tests/test_scope.py`: 32 Tier A safety tests.
+- M1 evaluation subsystem (`eval/`): versioned, schema-validated challenge manifests
+  (`eval/manifests/`), orthogonal Outcome + FailureReason taxonomies, independent verifiers
+  (stronger than substring: JWT-claim checks, min-count, failure-phrase rejection), a
+  schema-versioned SQLite store with full provenance plus legacy `results.csv` export, and an
+  isolated `LocalDockerRunner` (per-trial container/workspace/egress-firewall/budget) driven by a
+  resumable, cost-capped controller. New CLI `run_experiment.py`; legacy `run_eval.py` unchanged.
+  `tests/test_eval.py`: 20 Tier A tests. The 10 Juice Shop challenges are migrated as dev-tier
+  manifests (not held-out).
 - Vuln-regression (`run_retest.py`): diffs two audit sessions' findings into new / fixed /
   still-open (matched by file+CWE), writing retest.md - confirm which issues a later commit fixed.
 - Bug-bounty scope mode (`run_bugbounty.py` + `agent/bugbounty.py`): parses a program's

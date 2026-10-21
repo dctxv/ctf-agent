@@ -9,3 +9,7 @@ __pycache__/
 
 # Runtime artifacts (shared Docker volume: evidence, loot, sessions, pocs)
 /workspace/
+
+# Evaluation subsystem: structured result store (results.csv stays the export)
+*.sqlite
+eval/results.sqlite
