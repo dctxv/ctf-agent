@@ -25,8 +25,10 @@ All notable changes to the AI CTF & Pentest Copilot.
   probes, not recall. The answer key is written host-side (`eval/keys/`, gitignored) and injected
   into the verifier only at check time, never into the agent's container (oracle isolation). The
   registry accepts generator manifests (no static challenge file); the runner stages the instance,
-  records the key, and verifies by exact match. Verified live: the XOR challenge solved end to end.
-  `tests/test_generators.py`: 13 tests.
+  records the key, and verifies by exact match. `tests/test_generators.py`: 13 tests. First
+  generalization run (`docs/BENCHMARK.md`): 9/9 (100%, 95% CI 70-100%) across the three
+  categories, 3 runs each, $0.033 total. Still pending in M3: baseline ablations (no-tools /
+  single-tool) and code-audit repos as dev/validation challenges.
 - M2 model-provider layer (`agent/llm.py`): a single `LLMClient` centralizes the DeepSeek
   (OpenAI-compatible) client, role -> model routing (loop/escalate/verify/summarize), pricing,
   and the thinking-mode handling that `agent.py`, `court.py`, and `learn.py` each hard-coded -
