@@ -60,6 +60,24 @@ class TestGenerators(unittest.TestCase):
             get_generator("nope")
 
 
+class TestHardGenerators(unittest.TestCase):
+    def test_xor_multibyte_leak_control(self):
+        d = tempfile.mkdtemp()
+        res = get_generator("xor_multibyte").generate(d, "s")
+        self.assertTrue(res["key"].startswith("FLAG{"))
+        blob = (Path(d) / "cipher.bin").read_bytes()
+        self.assertNotIn(res["key"].encode(), blob)   # flag not in the ciphertext
+        self.assertGreater(len(blob), 100)             # enough material for analysis
+        self.assertEqual(res["engagement"]["allowed_hosts"], [])
+
+    def test_chained_decode_leak_control_and_ascii(self):
+        d = tempfile.mkdtemp()
+        res = get_generator("chained_decode").generate(d, "s")
+        blob = (Path(d) / "blob.txt").read_bytes()
+        self.assertNotIn(res["key"].encode(), blob)    # flag not in the blob
+        self.assertTrue(all(c < 128 for c in blob))    # outermost layer is inspectable ASCII
+
+
 class TestFlagFromKeyVerifier(unittest.TestCase):
     def setUp(self):
         self.ws = tempfile.mkdtemp()
@@ -92,7 +110,8 @@ class TestRegistryWithGenerators(unittest.TestCase):
         ms = registry.load_manifests()
         gen = registry.select(ms, datasets={"test"})
         self.assertEqual({m["id"] for m in gen},
-                         {"gen-xor-flag", "gen-layered-encoding", "gen-buried-flag"})
+                         {"gen-xor-flag", "gen-layered-encoding", "gen-buried-flag",
+                          "gen-xor-multibyte", "gen-chained-decode"})
         for m in gen:
             self.assertNotIn("challenge", m)       # generator manifests have no challenge file
             self.assertIn("generator", m)

@@ -21,6 +21,13 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- Harder generated challenges (`eval/generators/crypto_hard.py`, `reverse_hard.py`): multi-byte
+  repeating-key XOR (needs key-length detection + a FLAG{ crib / frequency analysis) and a 5-7 round
+  mixed encode chain (base64/hex/zlib/byte-reversal, random order). Both require writing and running
+  code - a one-shot no-tools model cannot do them - so they give the agent / memory / scaling gates
+  real headroom. Verified live: both solved by the agent via scripts (multi-byte XOR $0.0042/7 steps,
+  chain $0.0062/8 steps). `run_experiment.py --memory-namespace` lets experiments share a memory
+  namespace for cold->warm cycles. Tests: +2 (leak control for both hard generators).
 - M8 offline optimization loop (`agent/optimize.py` + `run_optimize.py`): reads the eval store
   (outcome/cost metadata ONLY - never flags, keys, or evidence, asserted by a contamination check),
   compares the configs that ran on a challenge set, and writes human-reviewable policy PROPOSALS to

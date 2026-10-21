@@ -1,0 +1,26 @@
+[
+  {
+    "schema_version": 1,
+    "id": "gen-xor-multibyte",
+    "version": 1,
+    "category": "crypto",
+    "tier": "D",
+    "dataset": "test",
+    "difficulty": "hard",
+    "note": "Repeating multi-byte XOR over English text; needs key-length detection + crib/frequency - not one-shot-able.",
+    "generator": {"name": "xor_multibyte"},
+    "verifier": {"path": "evidence/flag.txt", "type": "flag_from_key"}
+  },
+  {
+    "schema_version": 1,
+    "id": "gen-chained-decode",
+    "version": 1,
+    "category": "reverse",
+    "tier": "D",
+    "dataset": "test",
+    "difficulty": "hard",
+    "note": "5-7 mixed rounds (base64/hex/zlib/reverse) in random order; must be peeled iteratively with code.",
+    "generator": {"name": "chained_decode"},
+    "verifier": {"path": "evidence/flag.txt", "type": "flag_from_key"}
+  }
+]

@@ -38,6 +38,8 @@ def main():
     ap.add_argument("--no-reset", action="store_true")
     ap.add_argument("--no-resume", action="store_true")
     ap.add_argument("--memory", action="store_true", help="enable experience memory (namespaced to the experiment)")
+    ap.add_argument("--memory-namespace", default=None,
+                    help="share a memory namespace across experiments (for cold->warm cycles)")
     ap.add_argument("--baselines", action="store_true",
                     help="run no-tools raw-model + single-step baselines alongside the full agent")
     ap.add_argument("--profiles", action="store_true",
@@ -75,7 +77,7 @@ def main():
     if a.memory:
         cfg["name"] = "flash-memory"
         cfg["memory"] = "on"
-        cfg["memory_namespace"] = a.experiment
+        cfg["memory_namespace"] = a.memory_namespace or a.experiment
     configs = [cfg]
     if a.baselines:
         configs = [
