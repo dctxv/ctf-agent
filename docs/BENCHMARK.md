@@ -149,3 +149,28 @@ Its value should appear on genuinely decomposable, multi-step engagements where 
 focus (or parallel subtasks) changes the outcome - untested here and future work. This matches the
 published literature, where multi-agent setups frequently lose on cost-adjusted outcome for
 smaller models.
+
+---
+
+## Memory on harder challenges (two cycles)
+
+Harder generated set (multi-byte XOR, mixed encode chain) - both require writing and running code.
+Three arms, 2 runs per challenge each (n=2 per challenge per arm; small - read as directional).
+
+| arm | solved | mean $ | mean steps | mean s |
+|---|---|---|---|---|
+| control (memory off) | 4/4 | 0.0050 | 7.25 | 24.7 |
+| cycle 1 (memory on, cold) | 4/4 | 0.0079 | 8.50 | 27.7 |
+| cycle 2 (memory on, warm) | 4/4 | 0.0053 | 7.00 | 20.9 |
+
+Per challenge, warm cycle 2: gen-xor-multibyte $0.0050 / 6.5 steps / 19.5s; gen-chained-decode
+$0.0057 / 7.5 steps / 22.3s. (The memory note now stores the agent's approach, not just tool
+names - e.g. "Recovered the repeating multi-byte XOR key and the flag; Method ...".)
+
+**Verdict: memory works mechanically but shows no clear net benefit, even with headroom.** Warm
+memory (cycle 2) recovered the cold-cycle overhead and matched the no-memory control (7.0 vs 7.25
+steps, $0.0053 vs $0.0050); it beat the cold cycle but not the control. The agent already solves
+these competently, so a retrieved hint saves little - the same conclusion as the easy set. A clear
+win would need challenges where the cheap model genuinely FAILS without guidance (success headroom,
+so a hint can flip fail->solve), or far more trials to separate a small effect from noise. n=2 is
+noisy; treat as directional.
