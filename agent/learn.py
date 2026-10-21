@@ -110,3 +110,51 @@ def generate_learning(session_dir, client=None, model=MODEL) -> dict:
         "tokens_in": u.prompt_tokens,
         "tokens_out": u.completion_tokens,
     }
+
+
+_CLIENT_PROMPT = """You are a penetration tester writing a formal, client-facing report.
+
+Engagement: {name}
+Target / scope: {targets}
+Objective: {goal}
+
+Methodology (tool calls in order):
+{steps}
+
+Tester's findings summary:
+{summary}
+
+Produce a professional Markdown penetration-test report with these sections:
+# Penetration Test Report - {name}
+## Executive summary
+Non-technical, 3-5 sentences: what was tested, the overall risk posture, and the headline findings.
+## Scope and methodology
+## Findings
+For EACH finding use `### <n>. <Title> - <Severity>` then cover: Affected asset/endpoint, Description,
+Evidence (cite PoC/artifact paths from the session), Impact, and Remediation. Map to a CWE where possible.
+## Risk summary
+A table mapping each finding to its severity.
+## Appendix: tools and artifacts
+
+Base everything ONLY on the session above. If the engagement was inconclusive or failed, report that
+honestly. Professional, client-appropriate tone; no invented findings."""
+
+
+def generate_client_report(session_dir, client=None, model=MODEL) -> dict:
+    info = summarize_session(session_dir)
+    client = client or _client()
+    prompt = _CLIENT_PROMPT.format(
+        name=info["name"],
+        targets=str(info["targets"])[:300],
+        goal=str(info["goal"])[:600],
+        steps="\n".join(f"- {s}" for s in info["steps"][:60]) or "(none recorded)",
+        summary=(info["summary"] or "(no summary)")[:4000],
+    )
+    resp = client.chat.completions.create(
+        model=model, messages=[{"role": "user", "content": prompt}], temperature=0.3)
+    md = resp.choices[0].message.content or ""
+    out_dir = info["events_path"].parent
+    (out_dir / "client_report.md").write_text(md, encoding="utf-8")
+    u = resp.usage
+    return {"client_report": str(out_dir / "client_report.md"),
+            "tokens_in": u.prompt_tokens, "tokens_out": u.completion_tokens}

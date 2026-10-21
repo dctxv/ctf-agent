@@ -8,6 +8,7 @@ Examples:
 
 Reads the session's events.json and writes learning.md + flashcards.json next to it.
 """
+import argparse
 import sys
 
 try:
@@ -19,7 +20,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from agent.learn import generate_learning
+from agent.learn import generate_learning, generate_client_report
 
 
 def resolve(arg):
@@ -34,13 +35,18 @@ def resolve(arg):
 
 def main():
     load_dotenv()
-    if len(sys.argv) < 2:
-        raise SystemExit("usage: python run_learn.py <session_dir_or_name>")
-    sd = resolve(sys.argv[1])
+    ap = argparse.ArgumentParser()
+    ap.add_argument("session", help="session dir, or a name under workspace/sessions")
+    ap.add_argument("--client", action="store_true", help="also generate a client-style report")
+    a = ap.parse_args()
+    sd = resolve(a.session)
     r = generate_learning(sd)
     print(f"[learning]   {r['learning_md']}")
     print(f"[flashcards] {r['flashcards']} ({r['n_cards']} cards)")
     print(f"[tokens] in={r['tokens_in']} out={r['tokens_out']}")
+    if a.client:
+        cr = generate_client_report(sd)
+        print(f"[client report] {cr['client_report']}")
 
 
 if __name__ == "__main__":

@@ -3,6 +3,12 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Phase 3 extras: the learning layer now auto-runs at session end - opt-in `auto_learn` on
+  `AgentSession`, enabled in the real runners (`main.py`, `run_ctfd.py`, `run_audit.py`) and
+  OFF for the eval so baselines stay clean/cheap - emitting a `learning_saved` event.
+  Added a client-style report template: `generate_client_report` / `run_learn.py --client`
+  produces a formal pentest report (executive summary, scope, per-finding
+  severity/impact/remediation, risk table, appendix). Demoed: dvpwa -> a 15 KB, 12-finding report.
 - Phase 3 learning layer: `agent/learn.py` + `run_learn.py` turn a finished session's
   events.json (goal + tool-call methodology + final summary) into a study aid - a Markdown
   writeup, key concepts, and 6-10 flashcards (JSON) - via one cheap LLM call, written next

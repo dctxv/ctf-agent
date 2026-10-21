@@ -9,7 +9,7 @@ def human_input(question):
 if __name__ == "__main__":
     load_dotenv()
     engagement = json.load(open(sys.argv[1]))
-    session = AgentSession(engagement, human_input)
+    session = AgentSession(engagement, human_input, auto_learn=True)
     try:
         session.run()
     except KeyboardInterrupt:

@@ -51,10 +51,13 @@ RULES:
 class AgentSession:
     """Event-emitting agent loop. The future dashboard subscribes to these events."""
 
-    def __init__(self, engagement: dict, human_input_fn, run_index: int | None = None):
+    def __init__(self, engagement: dict, human_input_fn, run_index: int | None = None,
+                 auto_learn: bool = False):
         self.engagement = engagement
         self.human_input_fn = human_input_fn
         self.run_index = run_index
+        self.auto_learn = auto_learn          # opt-in: generate a study aid at session end
+        self.artifact_dir = None
         self.client = OpenAI(api_key=os.environ["DEEPSEEK_API_KEY"],
                              base_url="https://api.deepseek.com")
         self.messages = []          # append-only (keeps prompt-prefix cache hits)
@@ -98,6 +101,8 @@ class AgentSession:
                 self._emit("budget_hit", {"reason": "cost", "cost_usd": round(self.cost_usd, 4)})
                 self._force_summary("Cost budget reached. Summarize findings and current state.")
         self._save_artifacts()
+        if self.auto_learn:
+            self._generate_learning()
 
     # ---------------- one model turn ----------------
     def _model_call(self, model: str, thinking: bool = False):
@@ -191,9 +196,19 @@ class AgentSession:
         if self.run_index is not None:            # keep each eval run separate
             out = out / f"run_{self.run_index:02d}"
         out.mkdir(parents=True, exist_ok=True)
+        self.artifact_dir = out
         (out / "transcript.json").write_text(json.dumps(self.messages, indent=2, default=str),
                                              encoding="utf-8")
         (out / "events.json").write_text(json.dumps(self.events, indent=2),
                                          encoding="utf-8")
         (out / "cost.txt").write_text(f"${self.cost_usd:.4f}\n", encoding="utf-8")
         self._emit("artifacts_saved", {"path": str(out)})
+
+    def _generate_learning(self):
+        # Best-effort: a learning failure must never break the finished session.
+        try:
+            from agent.learn import generate_learning
+            r = generate_learning(self.artifact_dir, client=self.client)
+            self._emit("learning_saved", {"flashcards": r["n_cards"], "path": r["learning_md"]})
+        except Exception as e:
+            self._emit("learning_error", {"error": str(e)[:200]})

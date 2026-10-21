@@ -99,7 +99,7 @@ def main():
         dep_scan_dry_run(eng)
         return
 
-    session = AgentSession(eng, auto_human if a.unattended else human_input)
+    session = AgentSession(eng, auto_human if a.unattended else human_input, auto_learn=True)
     try:
         session.run()
     except KeyboardInterrupt:

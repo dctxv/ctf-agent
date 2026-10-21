@@ -76,7 +76,7 @@ def main():
             {k: v for k, v in eng.items() if not k.startswith("_")}, indent=2))
         return
 
-    session = AgentSession(eng, human_input)
+    session = AgentSession(eng, human_input, auto_learn=True)
     try:
         session.run()
     except KeyboardInterrupt:
