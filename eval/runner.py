@@ -254,10 +254,9 @@ class LocalDockerRunner(Runner):
 
         eng["workspace"] = str(ws_host)
         eng["container"] = cname
-        if "max_steps" in config:
-            eng["max_steps"] = config["max_steps"]
-        if "max_cost_usd" in config:
-            eng["max_cost_usd"] = config["max_cost_usd"]
+        for k in ("max_steps", "max_cost_usd", "loop_model", "escalate_model", "escalate_after"):
+            if k in config:
+                eng[k] = config[k]
 
         # experience memory (opt-in via config["memory"]). Retrieve relevant past
         # lessons and inject them into the goal; the authoritative outcome is

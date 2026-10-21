@@ -106,6 +106,8 @@ class AgentSession:
         self.messages.append({"role": "user", "content": begin})
         max_steps = self.engagement.get("max_steps", MAX_STEPS_DEFAULT)
         max_cost = self.engagement.get("max_cost_usd", 1.0)
+        loop_model = self.engagement.get("loop_model", MODELS["loop"])
+        escalate_model = self.engagement.get("escalate_model", MODELS["escalate"])
 
         while not self.finished and self.steps < max_steps and self.cost_usd < max_cost:
             state = read_control(self.artifact_dir)
@@ -127,9 +129,9 @@ class AgentSession:
             if self.escalate_next:
                 self.escalate_next = False
                 # PATCH 2: no `return` here — escalate once, then keep looping
-                self._model_call(MODELS["escalate"], thinking=True)
+                self._model_call(escalate_model, thinking=True)
             else:
-                self._model_call(MODELS["loop"])
+                self._model_call(loop_model)
 
         if not self.finished:
             if self.steps >= max_steps:
@@ -187,9 +189,10 @@ class AgentSession:
             self.consecutive_failures = 0
         else:
             self.consecutive_failures += 1
-            if self.consecutive_failures >= 2:
+            if self.consecutive_failures >= self.engagement.get("escalate_after", 2):
                 self.escalate_next = True
-                self._emit("escalation", {"reason": "2 consecutive command failures"})
+                self._emit("escalation",
+                           {"reason": f"{self.consecutive_failures} consecutive command failures"})
 
     def _force_summary(self, why: str):
         self.messages.append({"role": "user", "content": why})

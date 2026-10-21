@@ -40,6 +40,8 @@ def main():
     ap.add_argument("--memory", action="store_true", help="enable experience memory (namespaced to the experiment)")
     ap.add_argument("--baselines", action="store_true",
                     help="run no-tools raw-model + single-step baselines alongside the full agent")
+    ap.add_argument("--profiles", action="store_true",
+                    help="run Economy/Balanced/Maximum adaptive-scaling profiles")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -78,6 +80,15 @@ def main():
             {"name": "agent-full", "model": "deepseek-flash", "policy": "loop-escalate"},
             {"name": "agent-1step", "model": "deepseek-flash", "max_steps": 1},
             {"name": "raw-model", "model": "deepseek-flash", "mode": "raw-model"},
+        ]
+    if a.profiles:
+        configs = [
+            {"name": "economy", "model": "deepseek-flash", "loop_model": "deepseek-flash",
+             "escalate_after": 999, "max_steps": 12, "max_cost_usd": 0.3},
+            {"name": "balanced", "model": "deepseek-flash", "loop_model": "deepseek-flash",
+             "escalate_model": "deepseek-v4-pro", "escalate_after": 2, "max_steps": 25, "max_cost_usd": 0.5},
+            {"name": "maximum", "model": "deepseek-v4-pro", "loop_model": "deepseek-v4-pro",
+             "escalate_model": "deepseek-v4-pro", "escalate_after": 1, "max_steps": 40, "max_cost_usd": 0.8},
         ]
     summary = controller.run_experiment(
         experiment_id=a.experiment, manifests=sel, configs=configs, runner=runner,

@@ -21,6 +21,12 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- M6 adaptive scaling (`run_experiment.py --profiles`): the agent's cost/capability knobs are now
+  config-driven - `loop_model`, `escalate_model`, the escalation threshold (`escalate_after`), and
+  budgets - so Economy / Balanced / Maximum profiles run as a config axis. `eval/report.py` adds a
+  Pareto front (best verified success per dollar) over the per-config results. The cost-vs-success
+  comparison on the held-out set is published in `docs/BENCHMARK.md`. (Challenge generation, the
+  other half of M6, shipped in M3.) Tests: +3 (Pareto front, profile-knob passthrough).
 - M4 experience memory (`agent/memory.py`): a lightweight, namespaced store of procedural
   lessons (category, outcome, tool/approach sketch, goal keywords) - never flags or evidence
   (both scrubbed), so a held-out answer cannot leak into memory. Retrieval is keyword + category

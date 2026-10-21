@@ -84,5 +84,19 @@ class TestRenderMarkdown(unittest.TestCase):
         self.assertIn("Read with care", md)  # caveat block
 
 
+class TestPareto(unittest.TestCase):
+    def test_all_equal_success_cheapest_wins(self):
+        byc = {"economy": {"mean_cost_usd": 0.003, "solve_rate": 1.0},
+               "balanced": {"mean_cost_usd": 0.005, "solve_rate": 1.0},
+               "maximum": {"mean_cost_usd": 0.02, "solve_rate": 1.0}}
+        self.assertEqual(report.pareto_front(byc), ["economy"])
+
+    def test_tradeoff_keeps_both(self):
+        byc = {"cheap": {"mean_cost_usd": 0.001, "solve_rate": 0.5},
+               "mid": {"mean_cost_usd": 0.005, "solve_rate": 0.9},
+               "dominated": {"mean_cost_usd": 0.01, "solve_rate": 0.9}}
+        self.assertEqual(set(report.pareto_front(byc)), {"cheap", "mid"})
+
+
 if __name__ == "__main__":
     unittest.main()

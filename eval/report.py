@@ -115,6 +115,21 @@ def regression(rows_before, rows_after):
     return out
 
 
+def pareto_front(by_config):
+    """Config names that are Pareto-efficient on (mean cost ascending, solve rate
+    descending): no other config is at least as cheap AND at least as successful
+    while being strictly better on one of the two."""
+    items = [(c, a.get("mean_cost_usd", 0.0), a.get("solve_rate", 0.0))
+             for c, a in by_config.items()]
+    eff = []
+    for c, cost, sr in items:
+        dominated = any(oc != c and ocost <= cost and osr >= sr and (ocost < cost or osr > sr)
+                        for oc, ocost, osr in items)
+        if not dominated:
+            eff.append(c)
+    return sorted(eff)
+
+
 def _rate_line(a):
     return (f"{a['solved']}/{a['n']} "
             f"({a['solve_rate']:.0%}, 95% CI {a['ci_low']:.0%}-{a['ci_high']:.0%})"
@@ -156,4 +171,6 @@ def render_markdown(summary, title="Benchmark report", experiment_id=None):
     L += table("By challenge", s["by_challenge"])
     if len(s["by_config"]) > 1:
         L += table("By config", s["by_config"])
+        eff = pareto_front(s["by_config"])
+        L += [f"Pareto-efficient (best verified success per dollar): **{', '.join(eff)}**", ""]
     return "\n".join(L)

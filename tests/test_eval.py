@@ -267,5 +267,29 @@ class TestRawModelBaseline(unittest.TestCase):
         self.assertNotIn("prov", calls)   # no container for the no-tools baseline
 
 
+class TestProfilePassthrough(unittest.TestCase):
+    """Adaptive-scaling knobs in a config reach the engagement the agent runs."""
+    def test_knobs_reach_engagement(self):
+        from eval.runner import LocalDockerRunner
+        seen = {}
+
+        def agent(eng, cfg, m, ri, ws, c, dk, to):
+            seen.update(eng)
+            (Path(ws) / "evidence").mkdir(parents=True, exist_ok=True)
+            (Path(ws) / "evidence" / "c1_version.txt").write_text("v 1.2.3", encoding="utf-8")
+            return {"steps": 4, "cost_usd": 0.02}
+
+        man = registry.select(registry.load_manifests(), ids={"c01-version-leak"})[0]
+        r = LocalDockerRunner(workspace_root=tempfile.mkdtemp(), provision=lambda *a: None,
+                              teardown=lambda *a: None, apply_firewall=lambda *a: None,
+                              agent_runner=agent)
+        r.run_trial(man, run_index=1, experiment_id="e",
+                    config={"name": "maximum", "loop_model": "deepseek-v4-pro",
+                            "escalate_after": 1, "max_steps": 40})
+        self.assertEqual(seen.get("loop_model"), "deepseek-v4-pro")
+        self.assertEqual(seen.get("escalate_after"), 1)
+        self.assertEqual(seen.get("max_steps"), 40)
+
+
 if __name__ == "__main__":
     unittest.main()
