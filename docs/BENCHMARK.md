@@ -127,3 +127,25 @@ times), but on challenges with no headroom it only adds cost; the reasoning mode
 escalation earn their keep only where the cheap model genuinely fails and a stronger model
 recovers the case - which these easy challenges are not. Expect the Pareto front to move toward
 balanced/maximum on harder, code-requiring challenges; measuring that is future work.
+
+---
+
+## Multi-agent (M7): does a supervisor + specialists beat the single agent?
+
+Same held-out generated set, single-agent vs multi-agent, 2 runs per challenge each (n=6 per arm).
+
+| config | solved | mean $ | mean steps | mean s |
+|---|---|---|---|---|
+| single-agent | 6/6 (100%) | 0.0031 | 6.5 | 16.5 |
+| multi-agent  | 6/6 (100%) | 0.0043 | 7.5 | 21.0 |
+
+The supervisor routed correctly (e.g. the XOR challenge to the crypto specialist, confirmed in the
+trial transcripts). But both arms solve 100%, and multi-agent costs ~1.4x more - the supervisor
+call plus a longer specialist framing - for no gain.
+
+**Eval-gate verdict: not worthwhile here.** Multi-agent must beat the single agent cost-adjusted to
+earn its place; on these self-contained, single-flag challenges the orchestration is pure overhead.
+Its value should appear on genuinely decomposable, multi-step engagements where a specialist's
+focus (or parallel subtasks) changes the outcome - untested here and future work. This matches the
+published literature, where multi-agent setups frequently lose on cost-adjusted outcome for
+smaller models.

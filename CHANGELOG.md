@@ -27,7 +27,9 @@ All notable changes to the AI CTF & Pentest Copilot.
   expertise. Wired into the eval runner as `--multiagent` (single-agent vs multi-agent A/B); no tool,
   scope, or verification path changes. Gated like memory and scaling: it must beat the single agent
   cost-adjusted on the held-out set, or it is reported as not worthwhile. `tests/test_multiagent.py`:
-  5 tests. Cost-vs-benefit result published in `docs/BENCHMARK.md`.
+  5 tests. Result: both arms 100% on the held-out set, multi-agent 1.4x cost for no gain - not
+  worthwhile here (the gate's honest verdict); the supervisor did route correctly (XOR -> crypto
+  specialist). Value would show on decomposable multi-step engagements. See `docs/BENCHMARK.md`.
 - M6 adaptive scaling (`run_experiment.py --profiles`): the agent's cost/capability knobs are now
   config-driven - `loop_model`, `escalate_model`, the escalation threshold (`escalate_after`), and
   budgets - so Economy / Balanced / Maximum profiles run as a config axis. `eval/report.py` adds a
