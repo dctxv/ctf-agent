@@ -83,7 +83,7 @@ All notable changes to the AI CTF & Pentest Copilot.
   Chromium via `--with-deps`.
 - Fixed `web_search` silently masking failures: it POSTed to Tavily with no HTTP
   status check, so an auth failure collapsed to "No results found." The 3× baseline
-  made 23 web_search calls (c08/c10) that all failed this way — Tavily returns HTTP
+  made 23 web_search calls (c08/c10) that all failed this way - Tavily returns HTTP
   401. It now switches to the current `Authorization: Bearer <key>` auth form and
   surfaces non-200 responses as `web_search error: HTTP <code> ...`. Preflight's
   Tavily check now does a real 1-result search and PASSes only on HTTP 200 with a
@@ -92,7 +92,7 @@ All notable changes to the AI CTF & Pentest Copilot.
   results and preflight's Tavily check PASSes. Re-evaluated at git `0d0f571` (same
   3× suite): web_search fired 12 times across c08/c10 with zero errors and real
   writeup content (fix verified live), but outcomes were identical to the a3d3e74
-  baseline (9/10 challenges, 27/30 runs; c08 still 0/3, c10 still 3/3) — working
+  baseline (9/10 challenges, 27/30 runs; c08 still 0/3, c10 still 3/3) - working
   web_search is outcome-neutral on this suite, and c08 remains a wordlist gap, not a
   discovery gap. (New rows appended to `results.csv` under sha `0d0f571`.)
 - Eval harness (`run_eval.py`): 10 fixed challenges, N runs each, content-asserted
