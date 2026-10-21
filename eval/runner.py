@@ -254,6 +254,7 @@ class LocalDockerRunner(Runner):
 
         eng["workspace"] = str(ws_host)
         eng["container"] = cname
+        eng["_mode"] = config.get("mode", "agent")
         for k in ("max_steps", "max_cost_usd", "loop_model", "escalate_model", "escalate_after"):
             if k in config:
                 eng[k] = config[k]

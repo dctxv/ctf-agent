@@ -21,6 +21,13 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- M7 multi-agent orchestration (`agent/multiagent.py`): a bounded supervisor + specialist design -
+  one supervisor routing call picks the best specialist (crypto / reverse / forensics / web / recon /
+  code-audit) with a one-line strategy, and that specialist runs the normal tool loop with its
+  expertise. Wired into the eval runner as `--multiagent` (single-agent vs multi-agent A/B); no tool,
+  scope, or verification path changes. Gated like memory and scaling: it must beat the single agent
+  cost-adjusted on the held-out set, or it is reported as not worthwhile. `tests/test_multiagent.py`:
+  5 tests. Cost-vs-benefit result published in `docs/BENCHMARK.md`.
 - M6 adaptive scaling (`run_experiment.py --profiles`): the agent's cost/capability knobs are now
   config-driven - `loop_model`, `escalate_model`, the escalation threshold (`escalate_after`), and
   budgets - so Economy / Balanced / Maximum profiles run as a config axis. `eval/report.py` adds a

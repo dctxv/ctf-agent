@@ -30,13 +30,25 @@ def main():
     eng = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     out = Path(sys.argv[2])
 
-    from agent.agent import AgentSession
-    session = AgentSession(eng, _auto_human)
-    err = ""
+    mode = eng.get("_mode", "agent")
+    extra_cost, prefix, err, session = 0.0, "", "", None
     try:
-        session.run()
+        if mode == "multi-agent":
+            from agent.multiagent import run_multiagent
+            r = run_multiagent(eng, _auto_human)
+            session, extra_cost = r["session"], r["supervisor_cost"]
+            prefix = f"supervisor->{r['specialist']} > "
+        else:
+            from agent.agent import AgentSession
+            session = AgentSession(eng, _auto_human)
+            session.run()
     except Exception as e:
         err = str(e)[:300]
+    if session is None:
+        out.write_text(json.dumps({"steps": 0, "cost_usd": round(extra_cost, 4),
+                                   "technique": "multi-agent (failed before run)",
+                                   "error": err, "finished_naturally": False}), encoding="utf-8")
+        return
 
     ev = session.events
 
@@ -48,11 +60,11 @@ def main():
     budget = count("budget_hit")
     tool_seq = [e["data"].get("tool") for e in ev
                 if e.get("type") == "tool_call" and e.get("data", {}).get("tool")]
-    technique = " > ".join(list(dict.fromkeys(tool_seq))[:10])
+    technique = prefix + " > ".join(list(dict.fromkeys(tool_seq))[:10])
     out.write_text(json.dumps({
         "steps": session.steps,
         "technique": technique,
-        "cost_usd": round(session.cost_usd, 4),
+        "cost_usd": round(session.cost_usd + extra_cost, 4),
         "tokens_in": toks_in,
         "tokens_out": toks_out,
         "escalations": count("escalation"),
