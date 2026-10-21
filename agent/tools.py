@@ -1,4 +1,4 @@
-import os, re, json, subprocess
+import os, re, json, subprocess, ipaddress
 from pathlib import Path
 import requests
 from dotenv import load_dotenv
@@ -9,24 +9,108 @@ WORKSPACE_HOST = os.environ.get("WORKSPACE_HOST", r"C:\ctf\workspace")
 CONTAINER = os.environ.get("AGENT_CONTAINER", "agent-box")
 
 # ---------------- allowlist enforcement ----------------
+# These checks are best-effort defense in depth at the command layer. Compared
+# to the old http(s)-only parse they catch scheme-less destinations (via the
+# network-tool guard), user@host, nc/telnet HOST PORT, and decimal/hex/IPv6 IP
+# encodings, and they FAIL CLOSED for a network tool whose target cannot be
+# resolved to an in-scope host. The authoritative boundary is the kernel-level
+# egress firewall in agent/net.py, applied to evaluation trial containers.
+
+# Tools that initiate an outbound network connection. A command invoking one of
+# these is held to a stricter rule: its destination must resolve to an in-scope
+# host, or the command is blocked.
+_NET_TOOLS = {
+    "curl", "wget", "nc", "ncat", "netcat", "telnet", "ssh", "scp", "sftp",
+    "ftp", "tftp", "nmap", "masscan", "rustscan", "sqlmap", "ffuf", "nuclei",
+    "gobuster", "dirb", "dirsearch", "feroxbuster", "nikto", "wpscan", "hydra",
+    "medusa", "ping", "ping6", "traceroute", "tracepath", "dig", "host",
+    "nslookup", "whois", "wfuzz", "httpx", "amass", "smbclient", "rpcclient",
+    "crackmapexec", "nxc", "evil-winrm", "openssl", "socat",
+}
+
+# Shell syntax that builds an argument at runtime, so a static scan cannot see
+# the real destination (variable expansion, command/process substitution).
+_DYNAMIC_RE = re.compile(r'\$\(|\$\{|\$[A-Za-z_]|`|<\(')
+
+
+def _normalize_host(tok: str):
+    """Canonicalize a host token. Decimal/hex integer and bracketed/IPv6 IP
+    encodings collapse to a canonical IP string so they cannot slip past the
+    allowlist in an alternate form. Returns a lowercased host or None."""
+    if not tok:
+        return None
+    tok = tok.strip().strip('.').lower()
+    if tok.startswith('[') and tok.endswith(']'):
+        tok = tok[1:-1]
+    if not tok:
+        return None
+    try:                                   # already a valid IP (dotted v4 or v6)
+        return str(ipaddress.ip_address(tok))
+    except ValueError:
+        pass
+    if re.fullmatch(r'\d+|0[xX][0-9a-fA-F]+', tok):   # integer/hex IPv4 encoding
+        try:
+            return str(ipaddress.ip_address(int(tok, 0)))
+        except (ValueError, OverflowError):
+            pass
+    return tok
+
 
 def extract_hosts(text: str) -> set:
-    """Best-effort extraction of hosts a command will touch."""
+    """Best-effort extraction of destination hosts from a command/URL string.
+    Returns normalized host tokens (IP encodings canonicalized)."""
+    text = text or ""
     hosts = set()
-    for m in re.finditer(r'https?://([A-Za-z0-9.\-]+)(?::\d+)?', text):
-        hosts.add(m.group(1).lower())
+
+    def add(tok):
+        h = _normalize_host(tok)
+        if h:
+            hosts.add(h)
+
+    # scheme://[user@]authority[:port]  (http, https, ftp, ws, redis, mysql, ...)
+    for m in re.finditer(r'[A-Za-z][A-Za-z0-9+.\-]*://([^\s/]+)', text):
+        auth = m.group(1)
+        if '@' in auth:
+            auth = auth.rsplit('@', 1)[1]
+        if auth.startswith('['):
+            auth = auth.split(']', 1)[0] + ']'
+        elif ':' in auth:
+            auth = auth.rsplit(':', 1)[0]
+        add(auth)
+    # scheme-less user@host for ssh/scp/sftp/rsync
+    for m in re.finditer(r'\b(?:ssh|scp|sftp|rsync)\b[^\n|;&]*?\b[\w.\-]+@([A-Za-z0-9.\-]+)', text):
+        add(m.group(1))
+    # nc/ncat/telnet HOST PORT
+    for m in re.finditer(r'\b(?:nc|ncat|netcat|telnet)\b\s+(?:-\S+\s+)*([A-Za-z0-9.\-]+)\s+\d{1,5}\b', text):
+        add(m.group(1))
+    # bare dotted-quad IPv4 anywhere
     for m in re.finditer(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', text):
-        hosts.add(m.group(0))
+        add(m.group(0))
+    # bracketed IPv6 anywhere
+    for m in re.finditer(r'\[[0-9A-Fa-f:]+\]', text):
+        add(m.group(0))
     return hosts
 
+
 def host_allowed(host: str, allowed: list) -> bool:
-    host = host.lower().strip('.')
-    for pat in allowed:
+    host = (host or "").lower().strip('.')
+    for pat in allowed or []:
         pat = pat.lower()
         if pat.startswith('*.'):
             if host.endswith(pat[1:]) or host == pat[2:]:
                 return True
         elif host == pat:
+            return True
+    return False
+
+
+def _invokes_network_tool(command: str) -> bool:
+    """True if any word in the command is a known network tool (basename-aware,
+    so /usr/bin/curl counts). Deliberately high-recall: over-blocking a stray
+    'echo curl' is the safe direction."""
+    for tok in re.split(r'[\s|;&()<>]+', command or ""):
+        tok = tok.strip().strip('"\'')
+        if tok and os.path.basename(tok) in _NET_TOOLS:
             return True
     return False
 
@@ -59,12 +143,23 @@ def _normalize(path: str) -> str:
 # ---------------- tool implementations ----------------
 
 def run_command(command: str, engagement: dict) -> str:
+    allowed = engagement["allowed_hosts"]
     hosts = extract_hosts(command)
-    bad = [h for h in hosts if not host_allowed(h, engagement["allowed_hosts"])]
+    bad = [h for h in hosts if not host_allowed(h, allowed)]
     if bad:
         return (f"ALLOWLIST BLOCKED this command: out-of-scope host(s) {bad}. "
-                f"Scope: {engagement['allowed_hosts']}. "
-                f"Stay in scope or use ask_human.")
+                f"Scope: {allowed}. Stay in scope or use ask_human.")
+    if _invokes_network_tool(command):
+        # A network tool must have a verifiable in-scope destination. A target
+        # built at runtime, or a scheme-less/unparseable one, fails closed.
+        if _DYNAMIC_RE.search(command):
+            return ("ALLOWLIST BLOCKED: this network command builds its destination at "
+                    "runtime (shell variable or substitution), which cannot be scope-checked. "
+                    f"Use an explicit in-scope host literal. Scope: {allowed}.")
+        if not hosts:
+            return ("ALLOWLIST BLOCKED: a network tool was invoked with no in-scope host that "
+                    "could be verified. Pass an explicit in-scope destination "
+                    f"(e.g. http://<host>/...). Scope: {allowed}.")
 
     try:
         # PATCH v1.2 (Bug A): the old `text=True` decoded subprocess output with

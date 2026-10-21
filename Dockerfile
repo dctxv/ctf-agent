@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-pwntools \
     gdb rlwrap \
     net-tools iputils-ping dnsutils \
+    nftables iptables \
     john hashcat wordlists \
     ocl-icd-libopencl1 pocl-opencl-icd \
     gcc libc6-dev libssl-dev \
