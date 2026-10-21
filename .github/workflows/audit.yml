@@ -1,0 +1,44 @@
+name: security-audit
+
+# Fast, dependency-free CI gate: runs the same static scanners the agent uses
+# (semgrep + osv-scanner) directly in the runner and surfaces findings in the job
+# summary. No agent-box, no API key, no cost. The deeper LLM-triaged audit stays
+# on-demand via run_audit.py. Report-only by default (does not fail the build).
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install scanners
+        run: |
+          pip install semgrep
+          sudo curl -fsSL https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64 -o /usr/local/bin/osv-scanner
+          sudo chmod +x /usr/local/bin/osv-scanner
+
+      - name: semgrep
+        run: semgrep --config auto --json -o semgrep.json . || true
+
+      - name: osv-scanner
+        run: osv-scanner scan source -r --format json --output osv.json . || true
+
+      - name: Summary
+        run: python .github/scripts/audit_summary.py semgrep.json osv.json >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-findings
+          path: |
+            semgrep.json
+            osv.json
+          if-no-files-found: ignore
