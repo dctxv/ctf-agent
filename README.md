@@ -35,11 +35,13 @@ open-source app; see the honest limitations below before pointing it at anything
 - **Headless browser tools.** Playwright-driven Chromium (`browser_open`,
   `browser_interact`, `browser_screenshot`) so the agent can render and act on JS single-
   page apps that `curl` cannot. Every URL is scope-checked like any command.
-- **Code-audit mode (`run_audit.py`).** Point it at a local source folder; it builds a
-  file-only engagement (no network in scope) and runs semgrep plus dependency-CVE
+- **Code-audit mode (`run_audit.py`).** Point it at a local source folder, or a GitHub repo
+  with `--github <url>` (shallow-cloned host-side and scanned statically, never executed); it
+  builds a file-only engagement (no network in scope) and runs semgrep plus dependency-CVE
   scanners (osv-scanner, pip-audit), triages the results, writes PoCs, and produces a
-  prioritized report. Demoed on a real OSS app (`dvpwa`): 12 findings including SQLi,
-  broken access control, stored XSS, weak hashing, and vulnerable dependencies.
+  prioritized report plus a structured `findings.json`. Demoed on a real OSS app (`dvpwa`):
+  14 findings including SQLi, broken access control, stored XSS, weak hashing, and vulnerable
+  dependencies.
 - **CTFd platform adapter (`run_ctfd.py`).** Pulls a challenge from a CTFd instance via
   its API, builds an engagement, downloads files, and can submit the flag. Scope stays
   operator-controlled (empty by default). Validated against a mock and a real local CTFd

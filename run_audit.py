@@ -13,7 +13,7 @@ import sys
 from dotenv import load_dotenv
 
 from agent.agent import AgentSession
-from agent.adapters import build_code_audit_engagement
+from agent.adapters import build_code_audit_engagement, build_github_audit_engagement
 from agent.privacy import from_engagement
 from agent.tools import CONTAINER
 
@@ -77,7 +77,8 @@ def dep_scan_dry_run(eng):
 def main():
     load_dotenv()
     ap = argparse.ArgumentParser()
-    ap.add_argument("source_dir")
+    ap.add_argument("source_dir", nargs="?", help="local source dir (omit when using --github)")
+    ap.add_argument("--github", help="clone a github.com repo and audit it (file-only)")
     ap.add_argument("--name")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--unattended", action="store_true", help="answer ask_human automatically (no prompts)")
@@ -89,8 +90,14 @@ def main():
     ap.add_argument("--max-cost", type=float, default=1.0)
     a = ap.parse_args()
 
-    eng = build_code_audit_engagement(a.source_dir, a.name, workspace=a.workspace,
-                                      max_steps=a.max_steps, max_cost_usd=a.max_cost)
+    if a.github:
+        eng = build_github_audit_engagement(a.github, workspace=a.workspace,
+                                            max_steps=a.max_steps, max_cost_usd=a.max_cost)
+    elif a.source_dir:
+        eng = build_code_audit_engagement(a.source_dir, a.name, workspace=a.workspace,
+                                          max_steps=a.max_steps, max_cost_usd=a.max_cost)
+    else:
+        raise SystemExit("give a source_dir or --github <url>")
     print(f"[staged] {eng['_audit']['source']} -> {eng['_audit']['staged']}")
     print(f"[engagement] {eng['engagement_name']} | allowed_hosts={eng['allowed_hosts']} (file-only)")
     print(f"[report target] {eng['_audit']['report']}")

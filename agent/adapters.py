@@ -11,6 +11,8 @@ an empty allowlist, so nothing can be touched until the operator approves scope.
 import os
 import re
 import shutil
+import stat
+import subprocess
 from pathlib import Path
 
 import requests
@@ -162,11 +164,65 @@ def build_code_audit_engagement(source_dir, name=None, *, workspace=".",
                  f"run a dependency CVE scan (osv-scanner; `pip-audit --no-deps -r <reqs>` for Python) and include vulnerable dependencies. "
                  f"Create the report at /workspace/{report_rel} EARLY and update it after each "
                  f"confirmed finding, so progress is saved even if you run low on steps; keep it "
-                 f"prioritized (most severe first)."),
+                 f"prioritized (most severe first). Keep /workspace/audit/{name}/findings.json in sync "
+                 f"with the report - rewrite the whole JSON array after each confirmed finding so it is "
+                 f"never empty if you run low on steps. Each object: id, title, severity "
+                 f"(critical|high|medium|low), file, line, cwe, confidence (high|medium|low), poc, "
+                 f"description, remediation."),
         "workspace": str(ws),
         "max_steps": max_steps,
         "max_cost_usd": max_cost_usd,
         "cmd_timeout_s": 300,
         "evidence": {"type": "file_exists", "path": report_rel},
-        "_audit": {"source": str(src), "staged": f"/workspace/{rel}", "report": f"/workspace/{report_rel}"},
+        "_audit": {"source": str(src), "staged": f"/workspace/{rel}",
+                   "report": f"/workspace/{report_rel}", "findings": f"audit/{name}/findings.json"},
     }
+
+
+# ---------------- GitHub repo audit (clone host-side, then the file-only audit) ----------------
+
+_GH_RE = re.compile(r'^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$')
+
+
+def _force_rmtree(path):
+    """Windows-safe delete: git marks .git pack files read-only, which breaks a
+    plain shutil.rmtree on Windows (WinError 5). Clear the bit, then remove."""
+    for root, dirs, files in os.walk(path):
+        for n in dirs + files:
+            try:
+                os.chmod(os.path.join(root, n), stat.S_IWRITE)
+            except OSError:
+                pass
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def clone_github(url, workspace=".", depth=1):
+    """Shallow-clone a github.com repo into workspace/targets/<owner>__<repo> (host-side).
+
+    github.com is never added to the agent allowlist: the clone happens before the
+    session, and the agent then audits local files only. The cloned code is scanned
+    statically, never executed.
+    """
+    m = _GH_RE.match((url or "").strip())
+    if not m:
+        raise ValueError(f"not a github.com repo URL: {url!r}")
+    owner, repo = m.group(1), m.group(2)
+    dest = Path(workspace) / "targets" / f"{owner}__{repo}"
+    if dest.exists():
+        _force_rmtree(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(
+        ["git", "clone", "--depth", str(depth),
+         f"https://github.com/{owner}/{repo}.git", str(dest)],
+        capture_output=True, text=True, timeout=180)
+    if r.returncode != 0:
+        raise RuntimeError(f"git clone failed: {(r.stderr or '').strip()[:200]}")
+    return dest, f"{owner}/{repo}"
+
+
+def build_github_audit_engagement(url, *, workspace=".", max_steps=40, max_cost_usd=1.0):
+    dest, slug = clone_github(url, workspace=workspace)
+    eng = build_code_audit_engagement(dest, name=slug.replace("/", "-").lower(),
+                                      workspace=workspace, max_steps=max_steps, max_cost_usd=max_cost_usd)
+    eng["_audit"]["github"], eng["_audit"]["repo"] = url, slug
+    return eng
