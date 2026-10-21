@@ -10,6 +10,7 @@ an empty allowlist, so nothing can be touched until the operator approves scope.
 """
 import os
 import re
+import shutil
 from pathlib import Path
 
 import requests
@@ -120,3 +121,48 @@ class CTFdAdapter(PlatformAdapter):
         r.raise_for_status()
         d = r.json().get("data", {})
         return {"status": d.get("status"), "message": d.get("message")}
+
+
+# ---------------- Phase 2.5: code-audit (folder-target) engagements ----------------
+
+_AUDIT_IGNORE = shutil.ignore_patterns(
+    ".git", "node_modules", "__pycache__", "*.pyc", ".venv", "venv",
+    "dist", "build", ".mypy_cache", ".pytest_cache")
+
+
+def build_code_audit_engagement(source_dir, name=None, *, workspace=".",
+                                max_steps=40, max_cost_usd=1.0):
+    """Stage a local source tree into the workspace and build a file-only
+    (no network) engagement for a static security audit.
+
+    allowed_hosts is empty by design: a code audit touches no host, and an empty
+    allowlist blocks every network command. The source is copied under
+    <workspace>/audit/<name>/src so the agent sees it at /workspace/audit/<name>/src.
+    """
+    src = Path(source_dir)
+    if not src.is_dir():
+        raise ValueError(f"source_dir is not a directory: {source_dir}")
+    name = name or re.sub(r'[^a-z0-9]+', '-', src.name.lower()).strip('-') or "target"
+    ws = Path(workspace)
+    rel = f"audit/{name}/src"
+    report_rel = f"audit/{name}/REPORT.md"
+    dest = ws / rel
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(src, dest, ignore=_AUDIT_IGNORE)
+    return {
+        "engagement_name": f"audit-{name}",
+        "targets": f"Local source tree at /workspace/{rel} (static code audit, no network target).",
+        "allowed_hosts": [],  # file-only: no host is in scope for a code audit
+        "goal": (f"Perform a security code audit of the source tree at /workspace/{rel}. "
+                 f"Run semgrep (e.g. `semgrep --config auto --json -o /workspace/audit/{name}/semgrep.json /workspace/{rel}`), "
+                 f"then read the flagged code. For each credible finding record file:line, severity, why it is "
+                 f"exploitable, and a minimal PoC or the fix. Discard false positives with a one-line reason. "
+                 f"Write a prioritized report to /workspace/{report_rel}."),
+        "workspace": str(ws),
+        "max_steps": max_steps,
+        "max_cost_usd": max_cost_usd,
+        "cmd_timeout_s": 300,
+        "evidence": {"type": "file_exists", "path": report_rel},
+        "_audit": {"source": str(src), "staged": f"/workspace/{rel}", "report": f"/workspace/{report_rel}"},
+    }

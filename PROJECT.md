@@ -14,7 +14,7 @@ Three target types are (or will be) supported:
 
 1. **Web applications** (live hosts - current focus, proven working)
 2. **CTF platforms** (HTB, picoCTF, PortSwigger - Phase 2)
-3. **Local codebases** (source-code audit - Phase 2.5; already runnable informally)
+3. **Local codebases** (source-code audit - Phase 2.5, now formalized: `run_audit.py` stages a folder as a file-only engagement, semgrep + LLM triage, demoed on a fixture)
 
 The design philosophy: **the model is the brain, the human is the operator, the tools are the hands, and the allowlist is the cage.** The agent never decides what it's *allowed* to touch - that's enforced in code.
 

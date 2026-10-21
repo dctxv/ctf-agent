@@ -3,6 +3,15 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Phase 2.5 code-audit mode (folder-target engagements): `build_code_audit_engagement`
+  (`agent/adapters.py`) stages a local source tree into the workspace and builds a
+  file-only engagement (empty allowed_hosts = no network in scope) directing the agent
+  to run semgrep, triage, PoC, and write a prioritized report. `run_audit.py` runner
+  with `--dry-run` (semgrep only, no API cost) and `--unattended`. Demoed on a
+  deliberately-insecure fixture (`tests/fixtures/vuln_sample`): the agent found all 4
+  injection flaws - semgrep auto caught 3 and missed `os.system`, which the agent
+  found by reading the code and then wrote a custom semgrep rule for - producing PoCs
+  and a 255-line report for $0.019 / 14 steps.
 - `compare_runs.py`: diffs two eval runs in `results.csv` by git SHA (per-challenge
   solve rate, mean steps, mean cost) and flags solve-rate drops or material
   step/cost increases, so a change is judged against a reference baseline.
