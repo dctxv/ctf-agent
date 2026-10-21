@@ -160,7 +160,9 @@ def build_code_audit_engagement(source_dir, name=None, *, workspace=".",
                  f"exploitable, and a minimal PoC or the fix. Discard false positives with a one-line reason. "
                  f"If the tree has dependency manifests (requirements.txt, package-lock.json, go.mod, etc.), also "
                  f"run a dependency CVE scan (osv-scanner; `pip-audit --no-deps -r <reqs>` for Python) and include vulnerable dependencies. "
-                 f"Write a prioritized report to /workspace/{report_rel}."),
+                 f"Create the report at /workspace/{report_rel} EARLY and update it after each "
+                 f"confirmed finding, so progress is saved even if you run low on steps; keep it "
+                 f"prioritized (most severe first)."),
         "workspace": str(ws),
         "max_steps": max_steps,
         "max_cost_usd": max_cost_usd,

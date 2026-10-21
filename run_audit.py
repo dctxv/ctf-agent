@@ -16,6 +16,11 @@ from agent.agent import AgentSession
 from agent.adapters import build_code_audit_engagement
 from agent.tools import CONTAINER
 
+try:  # subprocess/semgrep output is UTF-8; don't let a cp1252 console crash on it
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 
 def human_input(q):
     print(f"\n>>> AGENT NEEDS YOU: {q}")

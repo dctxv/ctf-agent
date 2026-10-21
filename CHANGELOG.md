@@ -3,6 +3,12 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Phase 2.5 polish + scale demo: `run_audit.py` and `run_ctfd.py` force UTF-8 stdout so a
+  cp1252 Windows console no longer crashes on tool output; the audit goal now writes the
+  report incrementally so partial progress survives the step budget. Demoed the auditor at
+  scale on a real OSS app (`dvpwa`): a 20 KB, 12-finding prioritized report (SQLi, broken
+  access control, stored XSS, MD5 passwords, vulnerable deps, unauth->compromise chain,
+  plus examined false positives) for $0.22 / 34 steps.
 - Phase 2.5 code-audit mode (folder-target engagements): `build_code_audit_engagement`
   (`agent/adapters.py`) stages a local source tree into the workspace and builds a
   file-only engagement (empty allowed_hosts = no network in scope) directing the agent
