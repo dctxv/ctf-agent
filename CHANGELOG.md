@@ -28,6 +28,9 @@ All notable changes to the AI CTF & Pentest Copilot.
   never in the agent's container. Whether it helps is measured by a memory-off vs memory-on A/B
   on the held-out generated set (reported honestly in `docs/BENCHMARK.md`, including null/negative).
   `tests/test_memory.py`: 8 tests (isolation, no-flag-leak, scoring, dedup, the runner loop).
+  A/B result: no measurable benefit on the generated set (9/9 both arms; mean steps 5.8 off vs 6.8
+  on, within noise at n=9) - an honest null, since the model already solves these; a test with
+  headroom (harder or recurring-trick challenges) is future work.
 - M3 generated challenges (`eval/generators/`): randomized, auto-verifiable, leak-controlled
   challenges in three new categories beyond web - crypto (single-byte XOR), reverse (layered
   base64/hex), forensics (flag buried in a binary blob). Each instance's FLAG is random (seeded

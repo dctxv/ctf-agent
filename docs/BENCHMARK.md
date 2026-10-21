@@ -60,3 +60,26 @@ Datasets: test | Categories: crypto, forensics, reverse
 | gen-layered-encoding | 3/3 (100%, 95% CI 44%-100%) | 0.0047 | 7.3333 | 0 |
 | gen-xor-flag | 3/3 (100%, 95% CI 44%-100%) | 0.0042 | 7.3333 | 0 |
 
+
+---
+
+## Memory A/B (M4): does experience memory help here?
+
+Same held-out generated set, memory-off vs memory-on, 3 runs per category each (n=9 per arm).
+
+| arm | solved | mean steps | mean $ | mean s |
+|---|---|---|---|---|
+| memory-off | 9/9 (100%) | 5.78 | 0.002 | 15.3 |
+| memory-on  | 9/9 (100%) | 6.78 | 0.003 | 17.4 |
+
+Per-category mean steps (off -> on): crypto 6.33 -> 7.33, forensics 5.33 -> 6.67, reverse 5.67 -> 6.33.
+
+**Finding: no measurable benefit on this set, and a slight overhead.** Solve rate is already at
+its ceiling - these challenges are tractable and the model knows the techniques - so memory has
+no headroom to raise it, and the injected "prior experience" hints add a little prompt cost and
+about one extra step. At n=9 per arm that step difference is within noise, not a real regression.
+
+This is the honest answer the A/B exists to give: on easy challenges the model already solves,
+stored experience does not help. Whether memory helps where it should - harder challenges, or a
+non-obvious trick that recurs across instances - is untested here and is future work. M4 delivers
+the mechanism and the measurement, not a capability claim.
