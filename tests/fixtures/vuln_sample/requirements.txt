@@ -1,0 +1,5 @@
+# Deliberately outdated, known-vulnerable pins to exercise the dependency-CVE scan.
+jinja2==2.10
+pyyaml==5.1
+requests==2.19.1
+urllib3==1.23

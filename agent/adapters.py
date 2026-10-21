@@ -158,6 +158,8 @@ def build_code_audit_engagement(source_dir, name=None, *, workspace=".",
                  f"Run semgrep (e.g. `semgrep --config auto --json -o /workspace/audit/{name}/semgrep.json /workspace/{rel}`), "
                  f"then read the flagged code. For each credible finding record file:line, severity, why it is "
                  f"exploitable, and a minimal PoC or the fix. Discard false positives with a one-line reason. "
+                 f"If the tree has dependency manifests (requirements.txt, package-lock.json, go.mod, etc.), also "
+                 f"run a dependency CVE scan (osv-scanner; `pip-audit --no-deps -r <reqs>` for Python) and include vulnerable dependencies. "
                  f"Write a prioritized report to /workspace/{report_rel}."),
         "workspace": str(ws),
         "max_steps": max_steps,

@@ -12,6 +12,11 @@ All notable changes to the AI CTF & Pentest Copilot.
   injection flaws - semgrep auto caught 3 and missed `os.system`, which the agent
   found by reading the code and then wrote a custom semgrep rule for - producing PoCs
   and a 255-line report for $0.019 / 14 steps.
+- Phase 2.5 dependency-CVE hunt: the toolbox image now ships osv-scanner (multi-ecosystem,
+  pinned v2.7.0 binary) and pip-audit (Python; needs python3-venv, now installed). Wired
+  into the audit goal and `run_audit.py --dry-run`. Demoed on a vulnerable `requirements.txt`
+  (jinja2/pyyaml/requests/urllib3): osv-scanner reports the full OSV advisory set and
+  pip-audit lists per-package CVEs with fixed versions.
 - `compare_runs.py`: diffs two eval runs in `results.csv` by git SHA (per-challenge
   solve rate, mean steps, mean cost) and flags solve-rate drops or material
   step/cost increases, so a change is judged against a reference baseline.

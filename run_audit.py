@@ -50,6 +50,24 @@ def semgrep_dry_run(eng, config):
         print("stderr:", r.stderr[:600])
 
 
+def dep_scan_dry_run(eng):
+    staged = eng["_audit"]["staged"]
+    cmd = (
+        "echo '--- osv-scanner ---'; "
+        f"(osv-scanner scan source -r {staged} 2>/tmp/osv.err || osv-scanner -r {staged} 2>>/tmp/osv.err) | tail -40; "
+        "tail -2 /tmp/osv.err 2>/dev/null; "
+        "echo; echo '--- pip-audit ---'; "
+        f"if ls {staged}/requirements*.txt >/dev/null 2>&1; then "
+        f"for rq in {staged}/requirements*.txt; do echo \"[$rq]\"; pip-audit --no-deps -r \"$rq\" 2>&1 | tail -40; done; "
+        "else echo '(no requirements.txt)'; fi"
+    )
+    r = subprocess.run(["docker", "exec", CONTAINER, "bash", "-lc", cmd],
+                       capture_output=True, encoding="utf-8", errors="replace", timeout=400)
+    print(r.stdout)
+    if r.stderr.strip():
+        print("stderr:", r.stderr[:400])
+
+
 def main():
     load_dotenv()
     ap = argparse.ArgumentParser()
@@ -72,6 +90,8 @@ def main():
     if a.dry_run:
         print(f"[dry-run] running semgrep (--config {a.config}) in container...\n")
         semgrep_dry_run(eng, a.config)
+        print("\n[dry-run] running dependency scanners in container...\n")
+        dep_scan_dry_run(eng)
         return
 
     session = AgentSession(eng, auto_human if a.unattended else human_input)
