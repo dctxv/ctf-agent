@@ -50,6 +50,13 @@ open-source app; see the honest limitations below before pointing it at anything
   and confirms or refutes each finding (verdict + grounded reason), to catch hallucinations.
   Verdicts show on the dashboard cards, and refuted findings are dropped from disclosure. On a
   labeled test (real vulns + planted fakes) it leaked zero fakes.
+- **Vuln-regression (`run_retest.py`).** Diffs two audit runs into new / fixed / still-open, so
+  you can confirm a fix landed.
+- **Bug-bounty scope mode (`run_bugbounty.py`).** Parses a program's scope into a *proposed*
+  engagement (allowlist from the in-scope assets) for you to review and launch - never
+  auto-applied or auto-run; warns on out-of-scope hosts that fall under an in-scope wildcard.
+- **CI audit-on-push (`.github/workflows/audit.yml`).** A report-only GitHub Action that runs
+  semgrep + osv-scanner on push/PR and posts the findings as a job summary.
 - **CTFd platform adapter (`run_ctfd.py`).** Pulls a challenge from a CTFd instance via
   its API, builds an engagement, downloads files, and can submit the flag. Scope stays
   operator-controlled (empty by default). Validated against a mock and a real local CTFd

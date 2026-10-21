@@ -3,6 +3,19 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Vuln-regression (`run_retest.py`): diffs two audit sessions' findings into new / fixed /
+  still-open (matched by file+CWE), writing retest.md - confirm which issues a later commit fixed.
+- Bug-bounty scope mode (`run_bugbounty.py` + `agent/bugbounty.py`): parses a program's
+  structured scope (HackerOne API via `H1_API_*` env, or `--scope-file`) into a PROPOSED
+  engagement written to `workspace/engagements/` (allowed_hosts from the in-scope assets) -
+  never auto-applied or auto-run; the operator reviews and launches it. Warns when an
+  out-of-scope host falls under an in-scope wildcard.
+- CI audit-on-push (`.github/workflows/audit.yml`): a report-only GitHub Action that runs
+  semgrep + osv-scanner on push/PR and posts a job summary (no agent-box, no API key, no cost);
+  the LLM-triaged audit stays on-demand.
+- GitHub-mode validation (`validate_github.py` + `challenges/github_validation.json`): measures
+  the auditor's recall against repos with known issue classes and appends `ghval-` rows to
+  results.csv. dvpwa: 4/4.
 - Findings court (second-pass verifier): `run_court.py` + `agent/court.py` re-read the cited
   source for each finding and adversarially confirm/refute it (verdict + grounded reason),
   merged back into findings.json. Eval-verifiable: on a labeled set (4 real fixture vulns + 3
