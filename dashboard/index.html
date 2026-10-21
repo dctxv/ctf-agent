@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CTF Agent Dashboard</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; display: flex; height: 100vh; }
+  #list { width: 340px; border-right: 1px solid #ddd; overflow: auto; padding: 8px; box-sizing: border-box; }
+  #feed { flex: 1; overflow: auto; padding: 10px; background: #0b0f14; color: #cfe3f0; box-sizing: border-box; }
+  h1 { font-size: 15px; margin: 6px 8px; }
+  .s { padding: 6px 8px; border: 1px solid #e3e3e3; border-radius: 6px; margin: 5px 0; cursor: pointer; }
+  .s:hover { background: #f2f6ff; }
+  .s .g { font-size: 12px; color: #666; margin-top: 2px; }
+  .badge { float: right; font-size: 11px; font-weight: 600; }
+  #hdr { color: #9ab; padding: 4px 2px 8px; border-bottom: 1px solid #223; margin-bottom: 6px; }
+  .ev { font-family: ui-monospace, monospace; font-size: 12px; margin: 2px 0; white-space: pre-wrap; word-break: break-word; }
+  .t { display: inline-block; min-width: 130px; color: #8bd; }
+  .tool_call .t { color: #ffd27f; }
+  .session_end .t, .learning_saved .t { color: #86f09a; }
+  .escalation .t, .budget_hit .t, .learning_error .t { color: #ff8a8a; }
+  .ask_human .t { color: #d79cff; }
+  .cost_update .t { color: #8aa0b3; }
+</style>
+</head>
+<body>
+  <div id="list"><h1>Sessions</h1><div id="sessions">loading…</div></div>
+  <div id="feed"><div id="hdr">pick a session →</div><div id="events"></div></div>
+<script>
+let es = null;
+
+async function loadSessions() {
+  const el = document.getElementById('sessions');
+  try {
+    const r = await fetch('/api/sessions');
+    const list = await r.json();
+    el.innerHTML = '';
+    if (!list.length) { el.textContent = 'no sessions found'; return; }
+    for (const x of list) {
+      const d = document.createElement('div');
+      d.className = 's';
+      const color = x.status === 'finished' ? '#2a8a2a' : '#b5700a';
+      d.innerHTML = `<span class="badge" style="color:${color}">${x.status}</span><b>${esc(x.id)}</b>`
+        + `<div class="g">${x.events} events · $${x.cost_usd} · ${esc(x.goal || '')}</div>`;
+      d.onclick = () => stream(x.id);
+      el.appendChild(d);
+    }
+  } catch (e) { el.textContent = 'failed to load sessions'; }
+}
+
+function stream(id) {
+  if (es) es.close();
+  document.getElementById('events').innerHTML = '';
+  document.getElementById('hdr').textContent = '▶ ' + id + '  (streaming)';
+  es = new EventSource('/api/sessions/' + encodeURIComponent(id).replace(/%2F/g, '/') + '/stream');
+  es.onmessage = (m) => { try { add(JSON.parse(m.data)); } catch (e) {} };
+  es.addEventListener('end', () => {
+    document.getElementById('hdr').textContent = '■ ' + id + '  (done)';
+    es.close();
+  });
+  es.onerror = () => { if (es) es.close(); };
+}
+
+function add(e) {
+  const d = document.createElement('div');
+  d.className = 'ev ' + (e.type || '');
+  let data = JSON.stringify(e.data);
+  if (data && data.length > 220) data = data.slice(0, 220) + '…';
+  const ts = (e.ts || '').slice(11, 19);
+  d.innerHTML = `<span style="color:#556">${ts}</span> <span class="t">${esc(e.type)}</span> ${esc(data)}`;
+  const f = document.getElementById('events');
+  f.appendChild(d);
+  f.scrollTop = f.scrollHeight;
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+loadSessions();
+</script>
+</body>
+</html>

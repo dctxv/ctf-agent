@@ -3,6 +3,13 @@
 All notable changes to the AI CTF & Pentest Copilot.
 
 ## [Unreleased]
+- Phase 4 dashboard (MVP): a FastAPI backend (`dashboard/server.py`) over the agent's saved
+  sessions - `GET /api/sessions`, `/api/sessions/{id}/events`, and an SSE
+  `/api/sessions/{id}/stream` that replays a session's events to mock a live feed - plus a
+  minimal single-page frontend (`dashboard/index.html`): session list (status, events, cost,
+  goal) and a color-coded live event feed via EventSource. Read-only, path-traversal guarded.
+  Verified in-browser: streamed a full SQLi session end to end. (Next: feed a running
+  session's live events straight into `/stream` instead of replaying saved `events.json`.)
 - Phase 3 extras: the learning layer now auto-runs at session end - opt-in `auto_learn` on
   `AgentSession`, enabled in the real runners (`main.py`, `run_ctfd.py`, `run_audit.py`) and
   OFF for the eval so baselines stay clean/cheap - emitting a `learning_saved` event.
