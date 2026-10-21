@@ -17,7 +17,10 @@ All notable changes to the AI CTF & Pentest Copilot.
   gains an Eval tab that renders verified solve-rate with Wilson confidence intervals,
   per-category / per-challenge tables, and the honesty caveats - straight from the structured
   store. Localhost, read-only. `.claude/launch.json` added so the dashboard starts with one
-  command. Verified live in the browser against the smoke experiments.
+  command. Verified live in the browser against the smoke experiments. Session controls added:
+  pause / resume / cancel of a running session via a `control.json` the agent loop checks between
+  steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
+  default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
 - M4 experience memory (`agent/memory.py`): a lightweight, namespaced store of procedural
   lessons (category, outcome, tool/approach sketch, goal keywords) - never flags or evidence
   (both scrubbed), so a held-out answer cannot leak into memory. Retrieval is keyword + category

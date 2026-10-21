@@ -8,6 +8,7 @@ Run:  python dashboard/server.py      (or: uvicorn dashboard.server:app --port 8
 """
 import asyncio
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -25,8 +26,20 @@ from eval import store as eval_store
 
 SESSIONS = (ROOT / "workspace" / "sessions").resolve()
 EVAL_STORE = (ROOT / "eval" / "results.sqlite")
+DASH_TOKEN = os.environ.get("DASHBOARD_TOKEN", "")
 
 app = FastAPI(title="CTF Agent Dashboard")
+
+
+@app.middleware("http")
+async def _auth(request, call_next):
+    # Optional token gate (defense in depth; the server also binds localhost only).
+    # Active only when DASHBOARD_TOKEN is set, so the default localhost flow is unchanged.
+    if DASH_TOKEN and request.url.path.startswith("/api"):
+        tok = request.headers.get("X-Dashboard-Token") or request.query_params.get("token")
+        if tok != DASH_TOKEN:
+            return JSONResponse({"detail": "unauthorized"}, status_code=401)
+    return await call_next(request)
 
 
 def _read_events(sdir: Path):
@@ -235,6 +248,20 @@ def api_eval_report(experiment: str = ""):
 @app.get("/api/eval/regression")
 def api_eval_regression(before: str, after: str):
     return JSONResponse(eval_report.regression(_eval_rows(before), _eval_rows(after)))
+
+
+@app.post("/api/sessions/{sid:path}/control")
+async def api_control(sid: str, req: Request):
+    """Operator control of a running session: pause | resume | cancel. Writes the
+    session's control.json, which the agent loop checks between steps."""
+    sdir = _sdir(sid)
+    body = await req.json()
+    action = (body or {}).get("action", "")
+    state = {"pause": "paused", "resume": "running", "cancel": "cancelled"}.get(action)
+    if not state:
+        raise HTTPException(status_code=400, detail="action must be pause|resume|cancel")
+    (sdir / "control.json").write_text(json.dumps({"state": state}), encoding="utf-8")
+    return {"session_id": sid, "state": state}
 
 
 @app.get("/")

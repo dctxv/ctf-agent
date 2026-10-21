@@ -1,4 +1,4 @@
-import os, json
+import os, json, time
 from pathlib import Path
 from datetime import datetime
 
@@ -40,6 +40,21 @@ RULES:
 - Use finish() when the goal is met, summarizing: what you found, PoC filenames,
   and the reasoning path. Be concise but complete.
 """
+
+
+def read_control(artifact_dir):
+    """Operator control state for a running session: 'running' | 'paused' |
+    'cancelled'. The dashboard writes <artifact_dir>/control.json; the loop reads
+    it between steps. Any read error means 'running' (controls are best-effort,
+    they never crash a session)."""
+    if not artifact_dir:
+        return "running"
+    try:
+        data = json.loads((Path(artifact_dir) / "control.json").read_text(encoding="utf-8"))
+        state = str(data.get("state", "running"))
+        return state if state in ("running", "paused", "cancelled") else "running"
+    except Exception:
+        return "running"
 
 
 class AgentSession:
@@ -93,6 +108,22 @@ class AgentSession:
         max_cost = self.engagement.get("max_cost_usd", 1.0)
 
         while not self.finished and self.steps < max_steps and self.cost_usd < max_cost:
+            state = read_control(self.artifact_dir)
+            if state == "cancelled":
+                self._emit("session_end", {"summary": "Cancelled by operator."})
+                self.finished = True
+                break
+            if state == "paused":
+                self._emit("paused", {})
+                waited = 0
+                while read_control(self.artifact_dir) == "paused" and waited < 3600:
+                    time.sleep(1)
+                    waited += 1
+                if read_control(self.artifact_dir) == "cancelled":
+                    self._emit("session_end", {"summary": "Cancelled by operator."})
+                    self.finished = True
+                    break
+                self._emit("resumed", {})
             if self.escalate_next:
                 self.escalate_next = False
                 # PATCH 2: no `return` here — escalate once, then keep looping

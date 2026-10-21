@@ -61,12 +61,37 @@
     </div>
   </div>
   <div id="right">
-    <div id="hdr">pick a session, or audit a repo &rarr;</div>
+    <div id="hdr">pick a session, or audit a repo &rarr;
+      <span id="ctrls" style="float:right;display:none">
+        <button onclick="control('pause')">Pause</button>
+        <button onclick="control('resume')">Resume</button>
+        <button onclick="control('cancel')">Cancel</button>
+      </span>
+    </div>
     <div id="feed"><div id="events"></div></div>
     <div id="findings"></div>
   </div>
 <script>
-let es = null, pollTimer = null;
+let es = null, pollTimer = null, curSession = null;
+
+function token() { try { return localStorage.getItem('dashtoken') || ''; } catch (e) { return ''; } }
+function authHeaders(extra) { const h = extra || {}; const t = token(); if (t) h['X-Dashboard-Token'] = t; return h; }
+function withTok(url) { const t = token(); return t ? (url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(t)) : url; }
+async function api(url, opts) {
+  opts = opts || {};
+  opts.headers = authHeaders(opts.headers || {});
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    const t = prompt('Dashboard token:');
+    if (t) { try { localStorage.setItem('dashtoken', t); } catch (e) {} return api(url, opts); }
+  }
+  return r;
+}
+function control(action) {
+  if (!curSession) return;
+  api('/api/sessions/' + encId(curSession) + '/control',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
+}
 
 function showTab(name) {
   for (const t of ['sessions', 'repos', 'eval']) {
@@ -81,7 +106,7 @@ function encId(id) { return id.split('/').map(encodeURIComponent).join('/'); }
 async function loadSessions() {
   const el = document.getElementById('sessions');
   try {
-    const list = await (await fetch('/api/sessions')).json();
+    const list = await (await api('/api/sessions')).json();
     el.innerHTML = list.length ? '' : 'no sessions found';
     for (const x of list) {
       const d = document.createElement('div');
@@ -96,6 +121,8 @@ async function loadSessions() {
 }
 
 function openSession(id) {
+  curSession = id;
+  document.getElementById('ctrls').style.display = 'inline';
   showFindings(id);   // show cards immediately if it is a finished audit
   stream(id);
 }
@@ -104,7 +131,7 @@ function stream(id) {
   if (es) es.close();
   document.getElementById('events').innerHTML = '';
   document.getElementById('hdr').textContent = '▶ ' + id + '  (streaming)';
-  es = new EventSource('/api/sessions/' + encId(id) + '/stream');
+  es = new EventSource(withTok('/api/sessions/' + encId(id) + '/stream'));
   es.onmessage = (m) => { try { add(JSON.parse(m.data)); } catch (e) {} };
   es.addEventListener('end', () => {
     document.getElementById('hdr').textContent = '■ ' + id + '  (done)';
@@ -129,7 +156,7 @@ async function showFindings(id) {
   const box = document.getElementById('findings');
   box.innerHTML = '';
   try {
-    const fs = await (await fetch('/api/sessions/' + encId(id) + '/findings')).json();
+    const fs = await (await api('/api/sessions/' + encId(id) + '/findings')).json();
     if (!fs.length) return;
     const hdr = document.createElement('div');
     hdr.style.cssText = 'color:#9ab;font-size:12px;margin-bottom:4px';
@@ -155,7 +182,7 @@ async function startAudit() {
   st.textContent = 'launching…';
   let id;
   try {
-    const r = await fetch('/api/github/audit', {
+    const r = await api('/api/github/audit', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, max_steps }) });
     if (!r.ok) { st.textContent = 'error: ' + (await r.text()); return; }
@@ -170,7 +197,7 @@ async function startAudit() {
   pollTimer = setInterval(async () => {
     tries++;
     try {
-      const l = await (await fetch('/api/sessions')).json();
+      const l = await (await api('/api/sessions')).json();
       if (l.some(s => s.id === id)) { clearInterval(pollTimer); st.textContent = 'streaming ' + id; loadSessions(); stream(id); }
     } catch (e) {}
     if (tries > 60) { clearInterval(pollTimer); st.textContent = 'timed out waiting for the session to start'; }
@@ -180,7 +207,7 @@ async function startAudit() {
 async function loadExperiments() {
   const el = document.getElementById('exps');
   try {
-    const list = await (await fetch('/api/eval/experiments')).json();
+    const list = await (await api('/api/eval/experiments')).json();
     el.innerHTML = list.length ? '' : 'no experiments yet (run run_experiment.py)';
     for (const x of list) {
       const d = document.createElement('div');
@@ -194,6 +221,8 @@ async function loadExperiments() {
 }
 
 async function openExperiment(exp) {
+  curSession = null;
+  document.getElementById('ctrls').style.display = 'none';
   if (es) es.close();
   if (pollTimer) clearInterval(pollTimer);
   document.getElementById('hdr').textContent = '▣ eval: ' + exp;
@@ -201,7 +230,7 @@ async function openExperiment(exp) {
   const feed = document.getElementById('events');
   feed.innerHTML = 'loading report…';
   try {
-    const s = await (await fetch('/api/eval/report?experiment=' + encodeURIComponent(exp))).json();
+    const s = await (await api('/api/eval/report?experiment=' + encodeURIComponent(exp))).json();
     feed.innerHTML = s.empty ? 'no rows for this experiment' : renderReport(s);
   } catch (e) { feed.innerHTML = 'failed to load report'; }
 }
