@@ -37,6 +37,7 @@ def main():
     ap.add_argument("--no-firewall", action="store_true")
     ap.add_argument("--no-reset", action="store_true")
     ap.add_argument("--no-resume", action="store_true")
+    ap.add_argument("--memory", action="store_true", help="enable experience memory (namespaced to the experiment)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -65,6 +66,10 @@ def main():
 
     runner = LocalDockerRunner(image=a.image, firewall=not a.no_firewall, reset_fn=reset)
     cfg = {"name": "flash-baseline", "model": "deepseek-flash", "policy": "loop-escalate"}
+    if a.memory:
+        cfg["name"] = "flash-memory"
+        cfg["memory"] = "on"
+        cfg["memory_namespace"] = a.experiment
     summary = controller.run_experiment(
         experiment_id=a.experiment, manifests=sel, configs=[cfg], runner=runner,
         runs=a.runs, global_cost_cap=a.cost_cap, resume=not a.no_resume,

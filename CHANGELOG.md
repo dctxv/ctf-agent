@@ -18,6 +18,16 @@ All notable changes to the AI CTF & Pentest Copilot.
   per-category / per-challenge tables, and the honesty caveats - straight from the structured
   store. Localhost, read-only. `.claude/launch.json` added so the dashboard starts with one
   command. Verified live in the browser against the smoke experiments.
+- M4 experience memory (`agent/memory.py`): a lightweight, namespaced store of procedural
+  lessons (category, outcome, tool/approach sketch, goal keywords) - never flags or evidence
+  (both scrubbed), so a held-out answer cannot leak into memory. Retrieval is keyword + category
+  scoring with recency decay (no embedding model, keeping it DeepSeek-only and dependency-free).
+  Namespaces isolate unrelated engagements/clients. Wired into the eval runner (opt-in via
+  `run_experiment.py --memory`): it retrieves relevant past lessons and injects them into the
+  goal, then records the authoritative verified outcome after the trial - memory is host-side,
+  never in the agent's container. Whether it helps is measured by a memory-off vs memory-on A/B
+  on the held-out generated set (reported honestly in `docs/BENCHMARK.md`, including null/negative).
+  `tests/test_memory.py`: 8 tests (isolation, no-flag-leak, scoring, dedup, the runner loop).
 - M3 generated challenges (`eval/generators/`): randomized, auto-verifiable, leak-controlled
   challenges in three new categories beyond web - crypto (single-byte XOR), reverse (layered
   base64/hex), forensics (flag buried in a binary blob). Each instance's FLAG is random (seeded

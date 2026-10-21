@@ -46,8 +46,12 @@ def main():
     toks_in = sum(e["data"].get("tokens_in", 0) for e in ev if e.get("type") == "cost_update")
     toks_out = sum(e["data"].get("tokens_out", 0) for e in ev if e.get("type") == "cost_update")
     budget = count("budget_hit")
+    tool_seq = [e["data"].get("tool") for e in ev
+                if e.get("type") == "tool_call" and e.get("data", {}).get("tool")]
+    technique = " > ".join(list(dict.fromkeys(tool_seq))[:10])
     out.write_text(json.dumps({
         "steps": session.steps,
+        "technique": technique,
         "cost_usd": round(session.cost_usd, 4),
         "tokens_in": toks_in,
         "tokens_out": toks_out,

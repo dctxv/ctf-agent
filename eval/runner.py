@@ -231,6 +231,22 @@ class LocalDockerRunner(Runner):
             eng["max_steps"] = config["max_steps"]
         if "max_cost_usd" in config:
             eng["max_cost_usd"] = config["max_cost_usd"]
+
+        # experience memory (opt-in via config["memory"]). Retrieve relevant past
+        # lessons and inject them into the goal; the authoritative outcome is
+        # recorded after verification. Memory is host-side, never in the container.
+        base_goal = eng.get("goal", "")
+        mem = None
+        if str(config.get("memory", "off")).lower() in ("on", "true", "1"):
+            from agent.memory import MemoryStore
+            ns = config.get("memory_namespace") or experiment_id
+            mem = MemoryStore(ROOT / "eval" / "memory" / f"{ns}.jsonl", namespace=ns)
+            hints = mem.format_hints(
+                mem.retrieve(goal=base_goal, category=manifest.get("category", "")))
+            if hints:
+                eng["goal"] = base_goal + \
+                    "\n\nPrior experience (from past engagements; may not apply):\n" + hints
+
         env_digest = image_digest(self.image, self.docker)
         t0 = time.time()
         try:
@@ -243,6 +259,10 @@ class LocalDockerRunner(Runner):
                                          cname, self.docker, self.wall_clock_s) or {}
             metrics.setdefault("duration_s", round(time.time() - t0, 2))
             outcome, reason, detail = verifier.verify(verifier_spec, ws_host)
+            if mem is not None:
+                mem.record(category=manifest.get("category", ""),
+                           outcome="solved" if outcome == Outcome.VERIFIED_SUCCESS else "failed",
+                           technique=metrics.get("technique", ""), goal=base_goal)
             return _result(manifest, run_index=run_index, experiment_id=experiment_id,
                            config=config, outcome=outcome, reason=reason, detail=detail,
                            metrics=metrics, workspace=str(ws_host), container=cname,

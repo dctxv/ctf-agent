@@ -22,3 +22,5 @@ eval/benchmark.json
 
 # Trusted answer keys for generated challenges (never mounted into the agent)
 eval/keys/
+# Experience memory store (host-side, namespaced)
+eval/memory/
