@@ -21,6 +21,19 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- Phase 0 multi-provider groundwork (offline, no API spend): `agent/llm.py` adds an Anthropic
+  provider alongside DeepSeek - routing by model id (`claude-*` -> Anthropic), translating our
+  OpenAI-style messages/tools into Anthropic Messages blocks and normalizing the response back to
+  the shape the agent reads, with prompt caching enabled and cache-aware cost accounting
+  (Haiku/Sonnet/Opus 5.5 pricing; cache prices are estimates, not the authoritative bill). DeepSeek
+  stays the default. Refusals (`stop_reason == "refusal"`) are surfaced and recorded as a distinct
+  `policy_refusal` outcome, not a solve failure. New `eval/campaign.py` is a persistent
+  cross-experiment spend ledger with a hard cap (default $40), enforced in the controller before
+  each trial (worst-case overshoot is one trial's `max_cost_usd`; runs are sequential). `run_experiment.py`
+  gains `--model` (e.g. `claude-haiku-5-5`) and `--campaign-cap`/`--campaign-file`. `requirements.txt`
+  adds `anthropic` (lazy-imported; install before the paid pilot). Tests: +9 (adapter
+  translation/cache/refusal, campaign cap). The real Anthropic wire format is validated in the paid
+  pilot, not offline.
 - Toolbox firewall made real (`Dockerfile.firewall`): a from-scratch rebuild of the toolbox image
   currently fails on kali-rolling (a pip `uninstall-no-record-file` drift at the uncompyle6/playwright
   step), so the firewall tooling (nftables/iptables) is added as a thin overlay on the known-good

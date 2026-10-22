@@ -11,6 +11,9 @@ __pycache__/
 # Runtime artifacts (shared Docker volume: evidence, loot, sessions, pocs)
 /workspace/
 
+# Campaign spend ledger (local accounting, not the authoritative provider bill)
+eval/campaign.json
+
 # Evaluation subsystem: the SQLite store is the source of truth; the CSV is a
 # derived per-experiment export (the repo-root results.csv stays owned by the
 # legacy run_eval.py / validate_github.py harness).

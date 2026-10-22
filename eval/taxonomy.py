@@ -26,6 +26,7 @@ class FailureReason(str, Enum):
     INFRASTRUCTURE = "infrastructure"
     BUDGET_EXHAUSTION = "budget_exhaustion"
     VERIFICATION = "verification"
+    POLICY = "policy_refusal"   # the model declined (stop_reason == "refusal") - not a solve failure
 
 
 SUCCESS = {Outcome.VERIFIED_SUCCESS}

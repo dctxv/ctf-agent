@@ -291,6 +291,9 @@ class LocalDockerRunner(Runner):
                                model=config.get("model", ""))
             metrics.setdefault("duration_s", round(time.time() - t0, 2))
             outcome, reason, detail = verifier.verify(verifier_spec, ws_host)
+            if metrics.get("refusals") and outcome != Outcome.VERIFIED_SUCCESS:
+                reason = FailureReason.POLICY
+                detail = f"{metrics['refusals']} policy refusal(s); {detail}"
             if mem is not None:
                 mem.record(category=manifest.get("category", ""),
                            outcome="solved" if outcome == Outcome.VERIFIED_SUCCESS else "failed",
@@ -310,6 +313,9 @@ class LocalDockerRunner(Runner):
                                          cname, self.docker, self.wall_clock_s) or {}
             metrics.setdefault("duration_s", round(time.time() - t0, 2))
             outcome, reason, detail = verifier.verify(verifier_spec, ws_host)
+            if metrics.get("refusals") and outcome != Outcome.VERIFIED_SUCCESS:
+                reason = FailureReason.POLICY
+                detail = f"{metrics['refusals']} policy refusal(s); {detail}"
             if mem is not None:
                 mem.record(category=manifest.get("category", ""),
                            outcome="solved" if outcome == Outcome.VERIFIED_SUCCESS else "failed",

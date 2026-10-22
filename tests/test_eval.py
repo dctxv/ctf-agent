@@ -165,6 +165,19 @@ class TestController(unittest.TestCase):
         self.assertLessEqual(summ["ran"], 2)  # stops once >= 0.07 spent
         st.close()
 
+    def test_campaign_cap_stops_across_the_run(self):
+        from pathlib import Path
+        from eval.campaign import Campaign
+        st = self._store()
+        camp = Campaign(Path(self.d) / "camp.json", cap_usd=0.08)
+        summ = controller.run_experiment(experiment_id="ecamp", manifests=self.ms, configs=[self.cfg],
+            runner=_FakeRunner(cost=0.05), runs=3, store=st, campaign=camp,
+            randomize=False, export_csv=None)
+        self.assertTrue(summ["campaign_cap_hit"])
+        self.assertLessEqual(summ["ran"], 2)      # halts once the ledger hits the cap
+        self.assertGreaterEqual(camp.spent(), 0.08)
+        st.close()
+
 
 class TestStubRunnerPipeline(unittest.TestCase):
     def test_pass_fail_infra(self):

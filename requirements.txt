@@ -1,4 +1,5 @@
 openai>=1.40
+anthropic>=0.40
 requests
 python-dotenv
 fastapi

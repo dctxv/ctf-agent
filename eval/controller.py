@@ -21,7 +21,7 @@ def build_matrix(manifests, configs, runs):
 
 def run_experiment(*, experiment_id, manifests, configs, runner, runs=1,
                    store=None, store_path="eval/results.sqlite",
-                   global_cost_cap=None, randomize=True, seed=0, resume=True,
+                   global_cost_cap=None, campaign=None, randomize=True, seed=0, resume=True,
                    export_csv="eval/results.csv", on_trial=None):
     st = store or store_mod.Store(store_path)
     trials = build_matrix(manifests, configs, runs)
@@ -30,7 +30,7 @@ def run_experiment(*, experiment_id, manifests, configs, runner, runs=1,
     done = st.completed(experiment_id) if resume else set()
     spent = 0.0
     summary = {"experiment_id": experiment_id, "ran": 0, "skipped": 0,
-               "by_outcome": {}, "cost_cap_hit": False}
+               "by_outcome": {}, "cost_cap_hit": False, "campaign_cap_hit": False}
     for cfg, m, ri in trials:
         key = (cfg.get("name", "default"), m["id"], str(ri))
         if key in done:
@@ -39,8 +39,13 @@ def run_experiment(*, experiment_id, manifests, configs, runner, runs=1,
         if global_cost_cap is not None and spent >= global_cost_cap:
             summary["cost_cap_hit"] = True
             break
+        if campaign is not None and campaign.over_cap():
+            summary["campaign_cap_hit"] = True
+            break
         res = runner.run_trial(m, run_index=ri, experiment_id=experiment_id, config=cfg)
         st.record(res)
+        if campaign is not None:
+            campaign.add(res.get("cost_usd") or 0)
         spent += float(res.get("cost_usd") or 0)
         summary["ran"] += 1
         oc = res.get("outcome")
@@ -50,4 +55,7 @@ def run_experiment(*, experiment_id, manifests, configs, runner, runs=1,
     if export_csv:
         st.export_csv(export_csv, experiment_id)
     summary["total_cost_usd"] = round(spent, 4)
+    if campaign is not None:
+        summary["campaign_spent"] = round(campaign.spent(), 4)
+        summary["campaign_remaining"] = round(campaign.remaining(), 4)
     return summary

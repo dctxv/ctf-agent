@@ -73,6 +73,7 @@ def main():
         "tokens_out": toks_out,
         "escalations": count("escalation"),
         "ask_human": count("ask_human"),
+        "refusals": count("refusal"),
         "budget_hits": budget,
         "finished_naturally": bool(session.finished and budget == 0),
         "error": err,

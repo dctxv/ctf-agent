@@ -151,6 +151,8 @@ class AgentSession:
                                  tools=TOOL_SCHEMAS, temperature=0.3,
                                  thinking=thinking, timeout=180)
         self._track_cost(model, resp.usage)
+        if getattr(resp, "refusal_category", None):
+            self._emit("refusal", {"category": resp.refusal_category})
         msg = resp.choices[0].message
 
         if msg.tool_calls:
@@ -211,8 +213,10 @@ class AgentSession:
         return answer
 
     def _track_cost(self, model, usage):
-        p = PRICES[model]
-        c = (usage.prompt_tokens * p["in"] + usage.completion_tokens * p["out"]) / 1e6
+        p = PRICES.get(model) or PRICES["deepseek-flash"]
+        c = (usage.prompt_tokens * p["in"] + usage.completion_tokens * p["out"]
+             + getattr(usage, "cache_read", 0) * p.get("cache_read", 0)
+             + getattr(usage, "cache_write", 0) * p.get("cache_write", 0)) / 1e6
         self.cost_usd += c
         self._emit("cost_update", {"total_usd": round(self.cost_usd, 4),
                                    "tokens_in": usage.prompt_tokens,

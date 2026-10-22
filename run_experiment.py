@@ -49,6 +49,10 @@ def main():
                     help="A/B the single agent against the supervisor+specialist multi-agent")
     ap.add_argument("--reasoning", action="store_true",
                     help="use the DeepSeek reasoning model with bigger budgets (for hard benchmarks)")
+    ap.add_argument("--model", help="run a single model (e.g. claude-haiku-5-5); overrides config model")
+    ap.add_argument("--campaign-cap", type=float, default=40.0,
+                    help="hard global spend cap across experiments, USD (default 40)")
+    ap.add_argument("--campaign-file", default="eval/campaign.json", help="campaign spend ledger path")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -106,9 +110,16 @@ def main():
         configs = [{"name": "reasoning", "model": "deepseek-v4-pro",
                     "loop_model": "deepseek-v4-pro", "escalate_model": "deepseek-v4-pro",
                     "escalate_after": 2, "max_steps": 50, "max_cost_usd": 1.5}]
+    if a.model:
+        configs = [{"name": a.model, "model": a.model, "loop_model": a.model,
+                    "escalate_model": a.model}]
+    from eval.campaign import Campaign
+    campaign = Campaign(a.campaign_file, cap_usd=a.campaign_cap)
+    print(f"[campaign] spent ${campaign.spent():.2f} / cap ${campaign.cap:.2f} "
+          f"(remaining ${campaign.remaining():.2f})")
     summary = controller.run_experiment(
         experiment_id=a.experiment, manifests=sel, configs=configs, runner=runner,
-        runs=a.runs, global_cost_cap=a.cost_cap, resume=not a.no_resume,
+        runs=a.runs, global_cost_cap=a.cost_cap, campaign=campaign, resume=not a.no_resume,
         on_trial=lambda r: print(f"  [{r['challenge_id']} r{r['run_index']}] "
                                  f"{r['outcome']} ${r['cost_usd']} - {str(r['detail'])[:60]}"))
     print("summary:", summary)
