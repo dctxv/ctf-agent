@@ -174,3 +174,31 @@ these competently, so a retrieved hint saves little - the same conclusion as the
 win would need challenges where the cheap model genuinely FAILS without guidance (success headroom,
 so a hint can flip fail->solve), or far more trials to separate a small effect from noise. n=2 is
 noisy; treat as directional.
+
+---
+
+## InterCode-CTF (external benchmark): 83/100
+
+[InterCode-CTF](https://github.com/princeton-nlp/intercode) is 100 picoCTF tasks across six
+categories, imported and run through our eval subsystem (one attempt each, DeepSeek-flash,
+oracle-isolated exact-flag verification - the task's solution/ folder is never shown to the agent).
+
+**Overall: 83/100 = 83% (95% CI 74-89%), $1.42 total (~$0.014/task), ~53s/task, 0 infra errors.**
+
+| category | solved | rate (95% CI) | cost |
+|---|---|---|---|
+| general | 31/33 | 94% (80-98%) | $0.34 |
+| reverse | 21/27 | 78% (59-89%) | $0.27 |
+| forensics | 12/15 | 80% (55-93%) | $0.30 |
+| crypto | 14/19 | 74% (51-88%) | $0.30 |
+| pwn | 3/4 | 75% (30-95%) | $0.15 |
+| web | 2/2 | 100% (34-100%) | $0.06 |
+
+**Context.** InterCode-CTF is considered easy and near-saturated - published agents reach ~95% with
+stronger models and multiple attempts. 83% from a single cheap model (DeepSeek-flash), single
+attempt (pass@1), at ~1.4 cents per task is a strong, comparable result. Binary exploitation is the
+known ceiling for this model class (only 4 pwn tasks here, so that 75% is high-variance).
+
+**Honest caveats.** picoCTF challenges and writeups are public, so this measures recall as much as
+discovery (the same caveat as Juice Shop). Single attempt; multi-attempt would score higher. The
+flag is exact-match verified against the dataset's gold flag, injected host-side.
