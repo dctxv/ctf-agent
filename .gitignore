@@ -24,3 +24,8 @@ eval/benchmark.json
 eval/keys/
 # Experience memory store (host-side, namespaced)
 eval/memory/
+
+# Imported third-party benchmark data (CTF artifacts + flags; never committed)
+benchmarks/
+# Derived benchmark manifests (regenerable from the gitignored data via run_import_*)
+eval/manifests/benchmarks/

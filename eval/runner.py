@@ -240,7 +240,8 @@ class LocalDockerRunner(Runner):
         if manifest.get("generator"):
             from eval.generators import get_generator
             gen = get_generator(manifest["generator"]["name"])
-            res = gen.generate(ws_host, f"{experiment_id}:{manifest['id']}:r{run_index}")
+            res = gen.generate(ws_host, f"{experiment_id}:{manifest['id']}:r{run_index}",
+                               spec=manifest["generator"])
             eng = dict(res["engagement"])
             kdir = ROOT / "eval" / "keys"
             kdir.mkdir(parents=True, exist_ok=True)

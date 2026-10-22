@@ -21,6 +21,15 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- InterCode-CTF importer (`run_import_intercode.py` + `eval/generators/intercode.py`): imports the
+  100 picoCTF tasks from the InterCode-CTF dataset (clone `princeton-nlp/intercode`) as generator
+  manifests - a recognized, categorized, difficulty-labeled external benchmark for credible,
+  comparable scoring. Each task is staged into the trial workspace (its `solution/` folder excluded)
+  and scored by exact flag match, with the gold flag injected host-side (oracle isolation preserved).
+  The dataset and derived manifests are gitignored (regenerable from the data). `run_experiment.py
+  --manifests <dir>` selects a registry, and generators now take an optional spec. Categories:
+  general 33, reverse 27, crypto 19, forensics 15, pwn 4, web 2. Honest note: picoCTF flags and
+  writeups are public, so this measures recall as much as discovery.
 - Harder generated challenges (`eval/generators/crypto_hard.py`, `reverse_hard.py`): multi-byte
   repeating-key XOR (needs key-length detection + a FLAG{ crib / frequency analysis) and a 5-7 round
   mixed encode chain (base64/hex/zlib/byte-reversal, random order). Both require writing and running

@@ -28,6 +28,7 @@ def main():
     load_dotenv()
     ap = argparse.ArgumentParser()
     ap.add_argument("--experiment", default="juiceshop-dev")
+    ap.add_argument("--manifests", default="eval/manifests", help="manifest registry directory")
     ap.add_argument("--tier", action="append", help="filter by tier (repeatable)")
     ap.add_argument("--dataset", action="append", help="filter by dataset (repeatable)")
     ap.add_argument("--ids", nargs="*", help="explicit challenge ids")
@@ -49,7 +50,7 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
-    ms = registry.load_manifests()
+    ms = registry.load_manifests(registry_dir=a.manifests)
     sel = registry.select(ms,
                           tiers=set(a.tier) if a.tier else None,
                           datasets=set(a.dataset) if a.dataset else None,

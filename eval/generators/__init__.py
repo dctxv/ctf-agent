@@ -41,9 +41,10 @@ def base_engagement(name, targets, goal, *, max_steps=15, max_cost=0.3):
 
 
 def get_generator(name):
-    from eval.generators import crypto, crypto_hard, forensics, reverse, reverse_hard
+    from eval.generators import crypto, crypto_hard, forensics, intercode, reverse, reverse_hard
     gens = {"xor_flag": crypto, "layered_encoding": reverse, "buried_flag": forensics,
-            "xor_multibyte": crypto_hard, "chained_decode": reverse_hard}
+            "xor_multibyte": crypto_hard, "chained_decode": reverse_hard,
+            "intercode": intercode}
     if name not in gens:
         raise ValueError(f"unknown generator: {name}")
     return gens[name]

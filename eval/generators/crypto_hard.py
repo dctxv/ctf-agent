@@ -10,7 +10,7 @@ from pathlib import Path
 from eval.generators import base_engagement, make_flag, seed_int
 
 
-def generate(out_dir, seed):
+def generate(out_dir, seed, spec=None):
     rng = random.Random(seed_int(seed))
     flag = make_flag(rng)
     plaintext = (
