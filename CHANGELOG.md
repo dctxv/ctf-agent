@@ -21,6 +21,15 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- NYU CTF Bench importer, file-only subset (`run_import_nyu.py` + `eval/generators/nyu.py`): imports
+  the 70 file-only challenges from the official NYU CTF Bench `test/` split (CSAW, university-level,
+  harder than picoCTF) as generator manifests. Files are read straight from git (the repo has one
+  Windows-illegal filename) and ONLY the `challenge.json` handout `files` are staged - never the
+  solver/plaintext/builder files in the same directory (oracle isolation). Flag injected host-side,
+  exact-match verified. The other 130 `test/` challenges are service-based (need running challenge
+  containers) - a multi-container adapter is future work. `run_experiment.py --reasoning` runs the
+  DeepSeek reasoning model with bigger step/cost budgets for hard benchmarks. Categories: reverse 30,
+  crypto 15, forensics 12, misc 7, web 3, pwn 3.
 - InterCode-CTF importer (`run_import_intercode.py` + `eval/generators/intercode.py`): imports the
   100 picoCTF tasks from the InterCode-CTF dataset (clone `princeton-nlp/intercode`) as generator
   manifests - a recognized, categorized, difficulty-labeled external benchmark for credible,

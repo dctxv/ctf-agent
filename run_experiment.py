@@ -47,6 +47,8 @@ def main():
                     help="run Economy/Balanced/Maximum adaptive-scaling profiles")
     ap.add_argument("--multiagent", action="store_true",
                     help="A/B the single agent against the supervisor+specialist multi-agent")
+    ap.add_argument("--reasoning", action="store_true",
+                    help="use the DeepSeek reasoning model with bigger budgets (for hard benchmarks)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -100,6 +102,10 @@ def main():
             {"name": "single-agent", "model": "deepseek-flash"},
             {"name": "multi-agent", "model": "deepseek-flash", "mode": "multi-agent"},
         ]
+    if a.reasoning:
+        configs = [{"name": "reasoning", "model": "deepseek-v4-pro",
+                    "loop_model": "deepseek-v4-pro", "escalate_model": "deepseek-v4-pro",
+                    "escalate_after": 2, "max_steps": 50, "max_cost_usd": 1.5}]
     summary = controller.run_experiment(
         experiment_id=a.experiment, manifests=sel, configs=configs, runner=runner,
         runs=a.runs, global_cost_cap=a.cost_cap, resume=not a.no_resume,
