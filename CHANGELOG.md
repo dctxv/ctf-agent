@@ -21,6 +21,12 @@ All notable changes to the AI CTF & Pentest Copilot.
   pause / resume / cancel of a running session via a `control.json` the agent loop checks between
   steps (`POST /api/sessions/{id}/control`), plus optional token auth (`DASHBOARD_TOKEN`, off by
   default so the localhost flow is unchanged). `tests/test_control.py`: 7 tests.
+- Toolbox firewall made real (`Dockerfile.firewall`): a from-scratch rebuild of the toolbox image
+  currently fails on kali-rolling (a pip `uninstall-no-record-file` drift at the uncompyle6/playwright
+  step), so the firewall tooling (nftables/iptables) is added as a thin overlay on the known-good
+  `pentest-tools` image instead. The M0 egress firewall is now validated LIVE in the real toolbox
+  image (out-of-scope egress dropped, loopback/DNS allowed), so evaluation trial containers get
+  kernel-level scope enforcement, not just the command-layer guard.
 - NYU CTF Bench importer, file-only subset (`run_import_nyu.py` + `eval/generators/nyu.py`): imports
   the 70 file-only challenges from the official NYU CTF Bench `test/` split (CSAW, university-level,
   harder than picoCTF) as generator manifests. Files are read straight from git (the repo has one

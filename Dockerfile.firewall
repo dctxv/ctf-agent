@@ -1,0 +1,9 @@
+# Firewall overlay: add nftables/iptables on top of the known-good toolbox image.
+# Used instead of a full rebuild because a from-scratch build currently fails at
+# the pip step on kali-rolling (uninstall-no-record-file drift). This keeps the
+# proven image and just adds the egress-firewall tooling the eval runner needs.
+#   docker build -f Dockerfile.firewall -t pentest-tools:latest .
+FROM pentest-tools:latest
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nftables iptables \
+    && rm -rf /var/lib/apt/lists/*
