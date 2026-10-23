@@ -105,6 +105,32 @@ def _slug(*parts):
     return re.sub(r'[^a-z0-9]+', '-', "-".join(str(p) for p in parts).lower()).strip('-')
 
 
+def _provider_fault_guard(metrics, outcome, reason, detail):
+    """Reclassify a 'failure' where the model was never successfully called as an
+    INFRA_ERROR so it is excluded from solve-rate denominators.
+
+    A provider outage (rate limit, auth, network) can let the agent loop exit with
+    zero tokens and zero cost; verification then finds no flag and scores it a
+    verified_failure, silently deflating the model's score. A genuine agent run
+    always costs something, and even a refusal consumes input tokens, so keying on
+    (no tokens AND no cost) never swallows a real result. Successes are left alone.
+    """
+    if outcome == Outcome.VERIFIED_SUCCESS:
+        return outcome, reason, detail
+
+    def num(k):
+        try:
+            return float((metrics or {}).get(k, 0) or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    made_call = num("cost_usd") > 0 or num("tokens_in") > 0 or num("tokens_out") > 0
+    if not made_call:
+        return (Outcome.INFRA_ERROR, FailureReason.INFRASTRUCTURE,
+                f"no successful model call (0 tokens, $0.00) - provider/infra fault; {detail}")
+    return outcome, reason, detail
+
+
 class Runner:
     def run_trial(self, manifest, *, run_index, experiment_id, config):
         raise NotImplementedError
@@ -294,6 +320,7 @@ class LocalDockerRunner(Runner):
             if metrics.get("refusals") and outcome != Outcome.VERIFIED_SUCCESS:
                 reason = FailureReason.POLICY
                 detail = f"{metrics['refusals']} policy refusal(s); {detail}"
+            outcome, reason, detail = _provider_fault_guard(metrics, outcome, reason, detail)
             if mem is not None:
                 mem.record(category=manifest.get("category", ""),
                            outcome="solved" if outcome == Outcome.VERIFIED_SUCCESS else "failed",
@@ -316,6 +343,7 @@ class LocalDockerRunner(Runner):
             if metrics.get("refusals") and outcome != Outcome.VERIFIED_SUCCESS:
                 reason = FailureReason.POLICY
                 detail = f"{metrics['refusals']} policy refusal(s); {detail}"
+            outcome, reason, detail = _provider_fault_guard(metrics, outcome, reason, detail)
             if mem is not None:
                 mem.record(category=manifest.get("category", ""),
                            outcome="solved" if outcome == Outcome.VERIFIED_SUCCESS else "failed",

@@ -253,6 +253,32 @@ class TestLocalDockerRunnerOrchestration(unittest.TestCase):
         self.assertIn("tear", calls)
 
 
+class TestProviderFaultGuard(unittest.TestCase):
+    """A 'failure' where the model was never called (0 tokens, $0) is a provider
+    outage, not an agent loss, so it is reclassified as infra_error and excluded
+    from the solve rate. A real-cost failure is left as a failure."""
+    def _manifest(self):
+        return registry.select(registry.load_manifests(), ids={"c01-version-leak"})[0]
+
+    def _run(self, metrics):
+        tmp = tempfile.mkdtemp()
+        r = LocalDockerRunner(workspace_root=tmp, provision=lambda *a: None,
+                              teardown=lambda *a: None, apply_firewall=lambda *a: None,
+                              agent_runner=lambda *a: dict(metrics), firewall=False)
+        return r.run_trial(self._manifest(), run_index=1, experiment_id="e",
+                           config={"name": "flash", "model": "deepseek-flash"})
+
+    def test_zero_token_zero_cost_failure_is_infra_error(self):
+        # no evidence written -> verifier fails; 0 tokens/0 cost -> provider fault
+        res = self._run({"steps": 1, "cost_usd": 0.0, "tokens_in": 0, "tokens_out": 0})
+        self.assertEqual(res["outcome"], "infra_error")
+        self.assertIn("provider/infra fault", res["detail"])
+
+    def test_real_cost_failure_stays_a_failure(self):
+        res = self._run({"steps": 20, "cost_usd": 0.05, "tokens_in": 4000, "tokens_out": 500})
+        self.assertEqual(res["outcome"], "verified_failure")
+
+
 class TestRawModelBaseline(unittest.TestCase):
     """The no-tools baseline path: no container is provisioned, the injected raw
     runner produces the answer, and it is verified like any trial."""

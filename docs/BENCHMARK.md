@@ -202,3 +202,58 @@ known ceiling for this model class (only 4 pwn tasks here, so that 75% is high-v
 **Honest caveats.** picoCTF challenges and writeups are public, so this measures recall as much as
 discovery (the same caveat as Juice Shop). Single attempt; multi-attempt would score higher. The
 flag is exact-match verified against the dataset's gold flag, injected host-side.
+
+## NYU CTF Bench (external, university-level): Haiku, and a Sonnet recovery pass
+
+[NYU CTF Bench](https://github.com/NYU-LLM-CTF/nyuctf_agents) is CSAW (2017-2023) university-level
+CTF. We imported the **70 file-only challenges** (the 130 service-based ones need a multi-container
+target adapter we have not built) and ran them through the eval subsystem, one attempt each,
+oracle-isolated exact-flag verification. This set is much harder than InterCode.
+
+**Claude Haiku 5.5 - standalone: 37/68 = 54% (95% CI 43-66%), $1.08 total (~$0.029/solve), 0 refusals.**
+(70 trials, 2 excluded as infra errors.) Prompt caching makes Haiku cheaper per challenge than
+DeepSeek-flash in the agent loop.
+
+**Sonnet 5.5 recovery pass.** We then ran Claude Sonnet 5.5 on the 31 challenges Haiku failed - a
+"does a stronger model recover them?" probe. **Sonnet recovered 8/31 = 26% (95% CI 14-43%), $6.48
+total (~$0.81/recovery).** But the 23 it did not solve split into two very different kinds: **11
+policy refusals** (Sonnet declined the task on safety grounds) and 12 genuine attempts that failed
+verification. Haiku refused **0**. Separating the refusals, Sonnet solved **8/20 = 40% of the
+challenges it actually attempted**.
+
+| category | recovered | refused | attempted-failed | Haiku failed |
+|---|---|---|---|---|
+| forensics | 4 | 0 | 2 | 6 |
+| reverse | 2 | 3 | 6 | 11 |
+| crypto | 1 | 2 | 3 | 6 |
+| misc | 1 | 0 | 1 | 2 |
+| pwn | 0 | 3 | 0 | 3 |
+| web | 0 | 3 | 0 | 3 |
+| **total** | **8** | **11** | **12** | **31** |
+
+**The refusals are not random: Sonnet refused every pwn (3/3) and every web (3/3) challenge** - the
+offensive-exploitation categories - plus 3 reverse and 2 crypto. Haiku attempted all of them. So the
+pwn/web "0 recovered" is a *refusal*, not a capability ceiling: the stronger, more safety-tuned model
+declines binary-exploitation and web-attack framing that the smaller model simply tries. This is
+exactly the behavior the refusal-as-distinct-outcome tracking was built to surface, and it is the
+most interesting result of the pass.
+
+**Cascade (Haiku first, Sonnet on the residual): 45/68 = 66% (95% CI 54-76%), $7.56 total
+(~$0.168/solve).** Running the cheap model first and escalating only its failures to Sonnet solves
+two-thirds of the set at ~17 cents per solved challenge - far cheaper than running Sonnet on
+everything. Of the **23 unsolved by both**, 11 are Sonnet refusals (which Haiku also could not solve)
+and 12 are genuine double-failures (reverse and the hardest crypto dominate those).
+
+**DeepSeek-flash comparison (incomplete - billing).** A flash arm was attempted for a head-to-head,
+but the DeepSeek account hit `402 Insufficient Balance` ~10 challenges in, so only 10 of 70 ran. On
+those 10 fair pairs, Haiku 6 vs flash 5 - competitive, no large gap - but the full comparison needs
+the DeepSeek balance topped up and a re-run. The 60 unfunded trials are recorded as infra errors
+(excluded from rates), not losses.
+
+**Honest caveats.** CSAW challenges and writeups are public (recall as much as discovery). Single
+attempt (pass@1); multi-attempt would score higher. File-only subset: pwn/web results understate
+real capability because the service-based variants (live targets) are not included - and for Sonnet
+those six were all refusals, not attempts, so they say nothing about its pwn/web ability here. One
+run per challenge, so per-category splits and the paired flash comparison are high-variance. A trial where
+the model made no successful API call (0 tokens, $0) is classified `infra_error` and excluded from
+solve rates, so a provider outage never silently deflates a score.

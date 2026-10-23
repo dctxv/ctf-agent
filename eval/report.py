@@ -115,6 +115,120 @@ def regression(rows_before, rows_after):
     return out
 
 
+def paired_compare(rows_a, rows_b, label_a="A", label_b="B"):
+    """Challenge-by-challenge paired join of two experiments by challenge_id.
+
+    Each challenge is placed in exactly one bucket by whether each side produced
+    a verified success. Infra errors are not fair failures, so a side whose only
+    trials for a challenge were infra errors counts as 'no fair attempt' and the
+    pair is set aside as unpaired rather than silently scored as a loss.
+
+    Buckets (paired, both sides had a fair attempt):
+      a_only  - solved by A, not by B      (A's edge)
+      b_only  - solved by B, not by A      (B's edge)
+      both    - solved by both             (shared success)
+      neither - solved by neither          (shared failure)
+    Plus `unpaired` for challenges where at least one side never got a fair run.
+
+    Returns a dict with the bucketed challenge lists (each entry carries
+    category and the per-side cost), their counts, a per-category tally of the
+    four paired buckets, and the McNemar discordant totals (a_only vs b_only).
+    With one run per challenge a single discordant flip is noise, not a verdict;
+    the caller is expected to say so.
+    """
+    def fold(rows):
+        d = defaultdict(lambda: {"fair": 0, "solved": 0, "cat": None, "cost": 0.0})
+        for r in rows:
+            c = r.get("challenge_id")
+            e = d[c]
+            if e["cat"] is None:
+                e["cat"] = r.get("category")
+            e["cost"] += float(r.get("cost_usd") or 0)
+            if r.get("outcome") == "infra_error":
+                continue
+            e["fair"] += 1
+            if r.get("outcome") == "verified_success":
+                e["solved"] += 1
+        return d
+
+    a, b = fold(rows_a), fold(rows_b)
+    buckets = {"a_only": [], "b_only": [], "both": [], "neither": [], "unpaired": []}
+    by_cat = defaultdict(lambda: {"a_only": 0, "b_only": 0, "both": 0, "neither": 0})
+    for c in sorted(set(a) | set(b)):
+        ea, eb = a.get(c), b.get(c)
+        cat = (ea or eb or {}).get("cat")
+        entry = {"challenge_id": c, "category": cat,
+                 f"cost_{label_a}": round((ea or {}).get("cost", 0.0), 4),
+                 f"cost_{label_b}": round((eb or {}).get("cost", 0.0), 4)}
+        if not ea or not eb or ea["fair"] == 0 or eb["fair"] == 0:
+            entry["note"] = "no fair attempt on one side"
+            buckets["unpaired"].append(entry)
+            continue
+        sa, sb = ea["solved"] > 0, eb["solved"] > 0
+        bucket = "both" if (sa and sb) else "a_only" if sa else "b_only" if sb else "neither"
+        buckets[bucket].append(entry)
+        if cat is not None:
+            by_cat[cat][bucket] += 1
+    counts = {k: len(v) for k, v in buckets.items()}
+    return {
+        "label_a": label_a, "label_b": label_b,
+        "buckets": buckets, "counts": counts,
+        "by_category": {k: dict(v) for k, v in sorted(by_cat.items())},
+        "mcnemar": {"a_only": counts["a_only"], "b_only": counts["b_only"],
+                    "discordant": counts["a_only"] + counts["b_only"]},
+    }
+
+
+def render_paired_markdown(pc, title="Paired comparison"):
+    """Human-readable markdown for a paired_compare() result."""
+    la, lb = pc["label_a"], pc["label_b"]
+    c = pc["counts"]
+    L = [f"# {title}", "",
+         f"Paired by `challenge_id`: **{la}** vs **{lb}**. "
+         f"Infra errors are not counted as failures; pairs where one side never "
+         f"got a fair run are listed under *unpaired*.",
+         "",
+         "## Four buckets", "",
+         "| bucket | meaning | n |", "|---|---|---|",
+         f"| {la} only | {la} solved, {lb} failed | {c['a_only']} |",
+         f"| {lb} only | {lb} solved, {la} failed | {c['b_only']} |",
+         f"| shared success | both solved | {c['both']} |",
+         f"| shared failure | both failed | {c['neither']} |",
+         f"| unpaired | one side had no fair run | {c['unpaired']} |",
+         "",
+         f"Discordant pairs (McNemar): {la}-only {pc['mcnemar']['a_only']} vs "
+         f"{lb}-only {pc['mcnemar']['b_only']}. With one run per challenge a single "
+         f"flip is noise, not a verdict.", ""]
+
+    def listing(key, heading):
+        rows = [f"### {heading} ({c[key]})", ""]
+        items = pc["buckets"][key]
+        if not items:
+            return rows + ["_(none)_", ""]
+        rows += ["| challenge | category | "
+                 f"cost {la} | cost {lb} |", "|---|---|---|---|"]
+        for e in items:
+            rows.append(f"| {e['challenge_id']} | {e.get('category') or '?'} | "
+                        f"${e.get('cost_' + la, 0)} | ${e.get('cost_' + lb, 0)} |")
+        return rows + [""]
+
+    L += listing("a_only", f"{la} only wins")
+    L += listing("b_only", f"{lb} only wins")
+    L += listing("both", "Shared successes")
+    L += listing("neither", "Shared failures")
+    if pc["counts"]["unpaired"]:
+        L += listing("unpaired", "Unpaired (no fair run on one side)")
+    if pc["by_category"]:
+        L += ["## By category (paired buckets only)", "",
+              f"| category | {la} only | {lb} only | both | neither |",
+              "|---|---|---|---|---|"]
+        for cat, v in pc["by_category"].items():
+            L.append(f"| {cat} | {v['a_only']} | {v['b_only']} | "
+                     f"{v['both']} | {v['neither']} |")
+        L.append("")
+    return "\n".join(L)
+
+
 def pareto_front(by_config):
     """Config names that are Pareto-efficient on (mean cost ascending, solve rate
     descending): no other config is at least as cheap AND at least as successful
