@@ -244,11 +244,16 @@ two-thirds of the set at ~17 cents per solved challenge - far cheaper than runni
 everything. Of the **23 unsolved by both**, 11 are Sonnet refusals (which Haiku also could not solve)
 and 12 are genuine double-failures (reverse and the hardest crypto dominate those).
 
-**DeepSeek-flash comparison (incomplete - billing).** A flash arm was attempted for a head-to-head,
-but the DeepSeek account hit `402 Insufficient Balance` ~10 challenges in, so only 10 of 70 ran. On
-those 10 fair pairs, Haiku 6 vs flash 5 - competitive, no large gap - but the full comparison needs
-the DeepSeek balance topped up and a re-run. The 60 unfunded trials are recorded as infra errors
-(excluded from rates), not losses.
+**DeepSeek-flash head-to-head (complete, 70 challenges).** flash solved **43/70 = 61% (95% CI
+50-72%)** at **$8.13 total ($0.189/solve)**, 0 refusals - nominally above Haiku's 54%, but the paired
+comparison shows the gap is **not significant**. Of the 68 paired challenges: both solved 32, both
+failed 21, flash-only 10, Haiku-only 5 (McNemar exact two-sided **p = 0.30**). The two cheap models
+are statistically indistinguishable on solve rate here - but **Haiku is ~6.5x cheaper per solve**
+($0.029 vs $0.189), because prompt caching and shorter loops make it far cheaper per challenge.
+flash's discordant wins concentrate in web (3-0) and reverse (+4/-2); Haiku's in crypto. (An earlier
+attempt stalled at `402 Insufficient Balance` ~10 challenges in; those trials were recorded as infra
+errors and excluded until the balance was restored and they were re-run - the classifier fix below
+is what kept the outage from scoring as 60 losses.)
 
 **Honest caveats.** CSAW challenges and writeups are public (recall as much as discovery). Single
 attempt (pass@1); multi-attempt would score higher. File-only subset: pwn/web results understate
