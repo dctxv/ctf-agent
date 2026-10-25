@@ -253,6 +253,36 @@ class TestLocalDockerRunnerOrchestration(unittest.TestCase):
         self.assertIn("tear", calls)
 
 
+class TestNYUStagingGuard(unittest.TestCase):
+    """A NYU challenge whose listed handout is missing/empty in git must raise
+    InfraError at stage time (so it scores as infra, not an agent failure),
+    while a challenge whose files stage non-empty proceeds normally."""
+    def _gen(self, files_map):
+        from eval.generators import nyu
+        orig = nyu._show
+
+        def fake(path):
+            if path.endswith("challenge.json"):
+                return json.dumps({"category": "misc", "description": "x",
+                                   "flag": "flag{t}", "files": list(files_map)}).encode()
+            name = path.split("/")[-1]
+            return files_map.get(name, b"")
+        nyu._show = fake
+        try:
+            return nyu.generate(tempfile.mkdtemp(), "seed", spec={"dir": "test/x"})
+        finally:
+            nyu._show = orig
+
+    def test_empty_listed_file_raises_infra(self):
+        from eval.runner import InfraError
+        with self.assertRaises(InfraError):
+            self._gen({"payload.bin": b""})        # listed but empty in git
+
+    def test_present_files_stage_ok(self):
+        res = self._gen({"payload.bin": b"data"})  # non-empty -> normal
+        self.assertEqual(res["key"], "flag{t}")
+
+
 class TestProviderFaultGuard(unittest.TestCase):
     """A 'failure' where the model was never called (0 tokens, $0) is a provider
     outage, not an agent loss, so it is reclassified as infra_error and excluded
