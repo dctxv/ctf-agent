@@ -45,6 +45,29 @@ def _blob_size(path):
         return None
 
 
+_CONNECT = re.compile(r'\bnc\b|remote:|\{box\}|\{port\}|connect to|chal\.csaw\.io', re.I)
+
+
+def _is_service(cj, category):
+    """True if the flag lives on a remote endpoint, so the file-only (no-network)
+    harness cannot solve it. CSAW tags almost every challenge with a `box`, so that
+    alone is not enough; we require a box/internal_port AND a real remote signal:
+    an exploit category (pwn/web), an explicit internal_port, or a connect directive
+    in the description. (A crypto/rev challenge that merely lists a box but ships the
+    artifact locally - e.g. an encrypted-flag file - stays in the benchmark.)"""
+    if not ("box" in cj or "internal_port" in cj):
+        return False
+    return (category in ("pwn", "web") or "internal_port" in cj
+            or bool(_CONNECT.search(cj.get("description", ""))))
+
+
+def _is_synthetic_flag(flag):
+    """NYU replaced some flags with synthetic validation placeholders
+    (e.g. flag{flag_created_in_validation_...}) that are not derivable from the
+    challenge content, so a correct solve can never match. Exclude them."""
+    return "flag_created_in_validation" in flag or "created_in_validation" in flag
+
+
 def main():
     if not (NYU / ".git").exists():
         print("NYU data not found. Clone it first:\n  git clone --depth 1 "
@@ -64,16 +87,27 @@ def main():
                                         capture_output=True, text=True).stdout)
         cat = CATMAP.get(cj.get("category", "misc").lower(), "misc")
         slug = "nyu-" + re.sub(r'[^a-z0-9]+', '-', d[len("test/"):].lower()).strip('-')
-        # Validation: every file listed in challenge.json must be present and non-empty
-        # in git. Challenges that list handouts NYU hosts outside the repo stage as
-        # empty shells and are unsolvable, so they are excluded from the benchmark
-        # (not silently counted as agent failures). A challenge that lists no files is
-        # kept - some misc tasks are description-only and solvable without a handout.
+        # Exclusions (a challenge is kept only if it can be fairly solved offline from
+        # its files). Each excluded challenge is recorded with a reason so the set is
+        # reported separately rather than silently scored as an agent failure:
+        #  - empty_handout: a file listed in challenge.json is missing/empty in git
+        #    (NYU hosts some binaries outside the repo) -> unsolvable shell.
+        #  - service: the flag lives on a remote endpoint the no-network harness can't
+        #    reach (pwn/web services, nc challenges).
+        #  - synthetic_flag: the gold flag is an NYU validation placeholder, not derivable.
+        # A challenge that lists no files is kept - some misc tasks are description-only.
         listed = cj.get("files", [])
         bad = [f for f in listed if not (_blob_size(f"{d}/{f}") or 0)]
+        reason = None
         if listed and bad:
-            excluded.append({"id": slug, "dir": d, "category": cat,
-                             "missing_or_empty": bad})
+            reason = {"reason": "empty_handout", "detail": bad}
+        elif _is_synthetic_flag(cj.get("flag", "")):
+            reason = {"reason": "synthetic_flag", "detail": cj.get("flag", "")}
+        elif _is_service(cj, cat):
+            reason = {"reason": "service",
+                      "detail": cj.get("box") or f"internal_port {cj.get('internal_port')}"}
+        if reason:
+            excluded.append({"id": slug, "dir": d, "category": cat, **reason})
             continue
         manifests.append({
             "schema_version": 1, "id": slug, "version": 1, "category": cat,
@@ -84,12 +118,12 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(manifests, indent=2), encoding="utf-8")
     EXCLUDED.write_text(json.dumps(excluded, indent=2), encoding="utf-8")
-    print(f"wrote {OUT} with {len(manifests)} manifests (file-only test/ challenges)")
+    print(f"wrote {OUT} with {len(manifests)} manifests (file-only, offline-solvable)")
     print("by category:", dict(Counter(m["category"] for m in manifests)))
-    print(f"excluded {len(excluded)} challenge(s) with missing/empty handouts "
-          f"-> {EXCLUDED}")
-    for e in excluded:
-        print(f"  - {e['id']}  ({e['category']})  empty/missing: {e['missing_or_empty']}")
+    print(f"excluded {len(excluded)} challenge(s) -> {EXCLUDED}")
+    print("  by reason:", dict(Counter(e["reason"] for e in excluded)))
+    for e in sorted(excluded, key=lambda x: x["reason"]):
+        print(f"  - [{e['reason']:14}] {e['id']}  ({e['category']})  {e['detail']}")
 
 
 if __name__ == "__main__":

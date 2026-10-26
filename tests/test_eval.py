@@ -257,14 +257,14 @@ class TestNYUStagingGuard(unittest.TestCase):
     """A NYU challenge whose listed handout is missing/empty in git must raise
     InfraError at stage time (so it scores as infra, not an agent failure),
     while a challenge whose files stage non-empty proceeds normally."""
-    def _gen(self, files_map):
+    def _gen(self, files_map, flag="flag{t}"):
         from eval.generators import nyu
         orig = nyu._show
 
         def fake(path):
             if path.endswith("challenge.json"):
                 return json.dumps({"category": "misc", "description": "x",
-                                   "flag": "flag{t}", "files": list(files_map)}).encode()
+                                   "flag": flag, "files": list(files_map)}).encode()
             name = path.split("/")[-1]
             return files_map.get(name, b"")
         nyu._show = fake
@@ -281,6 +281,29 @@ class TestNYUStagingGuard(unittest.TestCase):
     def test_present_files_stage_ok(self):
         res = self._gen({"payload.bin": b"data"})  # non-empty -> normal
         self.assertEqual(res["key"], "flag{t}")
+
+    def test_flag_format_hint_uses_real_wrapper(self):
+        # the goal must tell the agent the challenge's real flag wrapper, not a hardcoded one
+        res = self._gen({"payload.bin": b"data"}, flag="csawctf{abc}")
+        self.assertIn("csawctf{...}", res["engagement"]["goal"])
+        self.assertNotIn("flag{...}", res["engagement"]["goal"])
+
+
+class TestNYUImportRules(unittest.TestCase):
+    """Import-time exclusion rules: service (remote flag) and synthetic flags."""
+    def test_is_service(self):
+        import run_import_nyu as imp
+        self.assertTrue(imp._is_service({"box": "pwn.chal.csaw.io"}, "pwn"))
+        self.assertTrue(imp._is_service({"box": "x", "internal_port": 2000}, "crypto"))
+        self.assertTrue(imp._is_service({"box": "x", "description": "nc host 1234"}, "crypto"))
+        # a crypto/rev challenge that merely lists a box but ships the artifact locally stays
+        self.assertFalse(imp._is_service({"box": "x", "description": "decrypt this file"}, "crypto"))
+        self.assertFalse(imp._is_service({}, "pwn"))   # no remote endpoint at all
+
+    def test_is_synthetic_flag(self):
+        import run_import_nyu as imp
+        self.assertTrue(imp._is_synthetic_flag("flag{flag_created_in_validation_mission_payload}"))
+        self.assertFalse(imp._is_synthetic_flag("flag{a_real_flag}"))
 
 
 class TestProviderFaultGuard(unittest.TestCase):
