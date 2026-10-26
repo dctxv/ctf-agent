@@ -39,6 +39,19 @@ class TestRegistry(unittest.TestCase):
         with self.assertRaises(ValueError):
             registry._validate({"id": "x"}, "inline")
 
+    def test_loader_skips_underscore_sidecars(self):
+        # a '_'-prefixed sidecar (e.g. _excluded.json) must not be parsed as a manifest
+        d = Path(tempfile.mkdtemp())
+        (d / "m.json").write_text(json.dumps([{
+            "schema_version": 1, "id": "t1", "version": 1, "category": "misc",
+            "tier": "D", "dataset": "validation", "generator": {"name": "nyu", "dir": "x"},
+            "verifier": {"path": "evidence/flag.txt", "type": "flag_from_key"},
+        }]), encoding="utf-8")
+        (d / "_excluded.json").write_text(json.dumps([{"id": "junk", "reason": "x"}]),
+                                          encoding="utf-8")
+        ms = registry.load_manifests(registry_dir=str(d))
+        self.assertEqual([m["id"] for m in ms], ["t1"])
+
     def test_validate_rejects_bad_tier(self):
         base = registry.load_manifests()[0].copy()
         base["tier"] = "Z"

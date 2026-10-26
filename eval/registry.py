@@ -40,6 +40,8 @@ def load_manifests(registry_dir="eval/manifests"):
     out = []
     d = ROOT / registry_dir
     for f in sorted(d.glob("*.json")):
+        if f.name.startswith("_"):
+            continue   # sidecar files (e.g. _excluded.json) are not manifests
         data = json.loads(f.read_text(encoding="utf-8"))
         for m in (data if isinstance(data, list) else [data]):
             out.append(_validate(m, f.name))

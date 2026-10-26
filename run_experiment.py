@@ -50,6 +50,8 @@ def main():
     ap.add_argument("--reasoning", action="store_true",
                     help="use the DeepSeek reasoning model with bigger budgets (for hard benchmarks)")
     ap.add_argument("--model", help="run a single model (e.g. claude-haiku-5-5); overrides config model")
+    ap.add_argument("--max-steps", type=int, help="override per-trial step budget (capability lever)")
+    ap.add_argument("--max-cost", type=float, help="override per-trial cost cap USD")
     ap.add_argument("--campaign-cap", type=float, default=40.0,
                     help="hard global spend cap across experiments, USD (default 40)")
     ap.add_argument("--campaign-file", default="eval/campaign.json", help="campaign spend ledger path")
@@ -113,6 +115,13 @@ def main():
     if a.model:
         configs = [{"name": a.model, "model": a.model, "loop_model": a.model,
                     "escalate_model": a.model}]
+    # per-trial budget overrides (applied to every selected config; the runner copies
+    # max_steps / max_cost_usd into the engagement, overriding the generator default)
+    for cfg in configs:
+        if a.max_steps is not None:
+            cfg["max_steps"] = a.max_steps
+        if a.max_cost is not None:
+            cfg["max_cost_usd"] = a.max_cost
     from eval.campaign import Campaign
     campaign = Campaign(a.campaign_file, cap_usd=a.campaign_cap)
     print(f"[campaign] spent ${campaign.spent():.2f} / cap ${campaign.cap:.2f} "

@@ -19,7 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 NYU = ROOT / "benchmarks" / "nyu-ctf"
 OUT = ROOT / "eval" / "manifests" / "benchmarks" / "nyu" / "nyu.json"
-EXCLUDED = OUT.parent / "nyu_excluded.json"
+# sidecar: the '_' prefix keeps the registry loader from treating it as a manifest
+EXCLUDED = OUT.parent / "_excluded.json"
 CATMAP = {"crypto": "crypto", "forensics": "forensics", "rev": "reverse",
           "misc": "misc", "web": "web", "pwn": "pwn", "ics": "misc"}
 
