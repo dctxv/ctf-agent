@@ -1,0 +1,33 @@
+name: tests
+
+# Real CI gate: runs the offline Python test suite (scope enforcement, eval harness,
+# llm layer, memory, multi-agent, …) and FAILS the build on any failure. The suite
+# needs no Docker and no API keys - scope/containment and logic are tested with mocks
+# and pure builders - so it runs clean on a vanilla runner. (The report-only static
+# security scan lives separately in audit.yml.)
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run offline test suite
+        run: python -m pytest tests/ -q

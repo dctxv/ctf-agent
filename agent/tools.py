@@ -32,6 +32,39 @@ _NET_TOOLS = {
 # the real destination (variable expansion, command/process substitution).
 _DYNAMIC_RE = re.compile(r'\$\(|\$\{|\$[A-Za-z_]|`|<\(')
 
+# Tools that reconfigure the network stack / firewall / routing. An engagement
+# never needs these, and in an eval trial they are exactly what an agent would
+# reach for to tear down its own egress firewall. Blocked outright at the command
+# layer (defense in depth; the eval trial's authoritative protection is that it
+# holds no NET_ADMIN, so these would fail anyway - see agent/net.py).
+_FW_TAMPER_TOOLS = {
+    "iptables", "ip6tables", "iptables-legacy", "ip6tables-legacy",
+    "iptables-restore", "ip6tables-restore", "nft", "nftables",
+    "ebtables", "arptables", "tc", "conntrack",
+}
+
+
+# Subcommands/verbs that make `ip ...` a mutating call rather than a read-only query.
+_IP_MUTATE = {"add", "del", "delete", "set", "replace", "change", "flush", "append", "netns", "tuntap"}
+
+
+def _tamper_tool(command: str):
+    """Return the first firewall/netns-tampering tool invoked, or None. Tools in
+    _FW_TAMPER_TOOLS are always refused; `ip` is refused only when it mutates the
+    stack (an `ip ... add/del/set/flush/...` or `ip netns/tuntap`), so read-only
+    queries like `ip addr show`, `ip route`, and `ss` are left alone."""
+    toks = [t.strip().strip('"\'') for t in re.split(r'[\s|;&()<>]+', command or "")]
+    bases = [os.path.basename(t) for t in toks if t]
+    for i, b in enumerate(bases):
+        if b in _FW_TAMPER_TOOLS:
+            return b
+        if b == "ip":
+            rest = bases[i + 1:]
+            verb = next((w for w in rest if w in _IP_MUTATE), None)
+            if verb:
+                return f"ip ... {verb}"
+    return None
+
 
 def _normalize_host(tok: str):
     """Canonicalize a host token. Decimal/hex integer and bracketed/IPv6 IP
@@ -144,6 +177,11 @@ def _normalize(path: str) -> str:
 
 def run_command(command: str, engagement: dict) -> str:
     allowed = engagement["allowed_hosts"]
+    tamper = _tamper_tool(command)
+    if tamper:
+        return (f"BLOCKED: `{tamper}` reconfigures the network stack / egress firewall, "
+                "which is never in scope for an engagement and is refused at the command "
+                "layer. The scope boundary is not the agent's to modify.")
     hosts = extract_hosts(command)
     bad = [h for h in hosts if not host_allowed(h, allowed)]
     if bad:

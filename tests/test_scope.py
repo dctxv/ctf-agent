@@ -115,6 +115,47 @@ class TestRunCommandScope(unittest.TestCase):
         self.assertNotIn("BLOCKED", r)
 
 
+class TestFirewallTamper(unittest.TestCase):
+    """The agent must not be able to reconfigure the egress firewall / network
+    stack from the command layer. Blocked before any docker exec, so no Docker."""
+
+    def _assert_fw_blocked(self, cmd):
+        r = tools.run_command(cmd, ENG)
+        self.assertTrue(r.startswith("BLOCKED:") and "network stack" in r,
+                        f"expected a firewall-tamper block, got: {r[:140]!r}")
+
+    def test_iptables_flush(self):
+        self._assert_fw_blocked("iptables -F OUTPUT")
+
+    def test_iptables_accept_policy(self):
+        self._assert_fw_blocked("iptables -P OUTPUT ACCEPT")
+
+    def test_ip6tables(self):
+        self._assert_fw_blocked("ip6tables -P OUTPUT ACCEPT")
+
+    def test_nft_flush(self):
+        self._assert_fw_blocked("nft flush ruleset")
+
+    def test_absolute_path_nft(self):
+        self._assert_fw_blocked("/usr/sbin/nft flush ruleset")
+
+    def test_ip_route_change(self):
+        self._assert_fw_blocked("ip route add default via 10.0.0.1")
+
+    def test_ip_link(self):
+        self._assert_fw_blocked("ip link set eth0 down")
+
+    def test_chained_tamper(self):
+        self._assert_fw_blocked("echo hi && iptables -F")
+
+    @mock.patch("agent.tools.subprocess.run")
+    def test_readonly_ip_query_allowed(self, mrun):
+        # `ip addr` / `ip a` (read-only) must NOT be blocked; only mutating subcommands are.
+        mrun.return_value = mock.Mock(returncode=0, stdout="1: lo", stderr="")
+        r = tools.run_command("ip addr show", ENG)
+        self.assertNotIn("BLOCKED", r)
+
+
 class TestNet(unittest.TestCase):
     def test_ruleset_drop_policy(self):
         rs = net.build_nft_ruleset(["93.184.216.34"])
@@ -142,6 +183,40 @@ class TestNet(unittest.TestCase):
     def test_resolve_localhost(self):
         r = net.resolve_hosts(["localhost"])
         self.assertTrue(any(ip.startswith("127.") or ip == "::1" for ip in r["ips"]))
+
+    def test_sibling_nft_command_has_netadmin_and_shared_netns(self):
+        c = net.sibling_nft_command("evalbox-x", "pentest-tools:latest")
+        self.assertIn("--cap-add=NET_ADMIN", c)
+        self.assertIn("--network=container:evalbox-x", c)
+        self.assertIn("--rm", c)
+        self.assertEqual(c[-3:], ["nft", "-f", "-"])
+
+    def test_sibling_iptables_command(self):
+        c = net.sibling_iptables_command("evalbox-x", "img", "iptables -F", docker="podman")
+        self.assertEqual(c[0], "podman")
+        self.assertIn("--cap-add=NET_ADMIN", c)
+        self.assertIn("--network=container:evalbox-x", c)
+        self.assertEqual(c[-3:], ["sh", "-lc", "iptables -F"])
+
+    def test_apply_requires_image(self):
+        # The firewall is applied from a sibling container, so an image is mandatory;
+        # without it we must fail loudly rather than silently skip containment.
+        with self.assertRaises(ValueError):
+            net.apply_egress_firewall("evalbox-x", ["10.0.0.1"])
+
+
+class TestProvisionNoNetAdmin(unittest.TestCase):
+    """The trial container must be created WITHOUT NET_ADMIN (the sibling holds it),
+    so the agent inside cannot flush its own egress firewall."""
+
+    def test_default_provision_omits_net_admin(self):
+        from eval import runner
+        with mock.patch("eval.runner.subprocess.run") as mrun:
+            mrun.return_value = mock.Mock(returncode=0, stdout="", stderr="")
+            runner._default_provision("evalbox-x", ".", "img", "docker", 60)
+        # _default_provision runs `docker rm -f` then `docker run -d ...`; grab the create call
+        create = next(ca.args[0] for ca in mrun.call_args_list if "run" in ca.args[0])
+        self.assertNotIn("--cap-add=NET_ADMIN", create)
 
 
 if __name__ == "__main__":

@@ -169,9 +169,13 @@ class StubRunner(Runner):
 # ---------------- default side-effecting steps for LocalDockerRunner ----------------
 
 def _default_provision(cname, ws_host, image, docker, ttl):
+    # No --cap-add=NET_ADMIN: the trial container must not be able to modify its
+    # own egress firewall. The rules are installed by a short-lived NET_ADMIN
+    # sibling that shares this container's netns (see agent/net.py). The default
+    # Docker capability set is kept (CAP_NET_RAW etc. remain, so nmap still works).
     subprocess.run([docker, "rm", "-f", cname], capture_output=True, text=True)
     r = subprocess.run(
-        [docker, "run", "-d", "--rm", "--cap-add=NET_ADMIN",
+        [docker, "run", "-d", "--rm",
          "-v", f"{Path(ws_host).resolve()}:/workspace",
          "--name", cname, image, "sleep", str(ttl)],
         capture_output=True, text=True, timeout=60)
@@ -252,7 +256,8 @@ class LocalDockerRunner(Runner):
             self._apply_firewall = apply_firewall
         else:
             from agent import net
-            self._apply_firewall = lambda c, hosts: net.apply_egress_firewall(c, hosts, docker=self.docker)
+            self._apply_firewall = lambda c, hosts: net.apply_egress_firewall(
+                c, hosts, docker=self.docker, image=self.image)
 
     def run_trial(self, manifest, *, run_index, experiment_id, config):
         slug = _slug(experiment_id, manifest["id"], f"r{run_index}")

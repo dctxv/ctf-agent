@@ -1,12 +1,21 @@
 """Network-level egress enforcement for evaluation trial containers.
 
 tools.py enforces scope at the command layer (best-effort, defense in depth).
-The authoritative boundary is here: a per-trial container is created with
---cap-add=NET_ADMIN, and this module installs a default-drop egress firewall
-that permits outbound traffic ONLY to the resolved in-scope hosts (plus
-loopback, established flows, and DNS). It is applied by the evaluation runner
-to ephemeral trial containers; it is deliberately NOT applied to the operator's
-long-lived agent-box, whose scope stays enforced at the command layer.
+The authoritative boundary is here: a default-drop egress firewall that permits
+outbound traffic ONLY to the resolved in-scope hosts (plus loopback, established
+flows, and DNS). It is applied by the evaluation runner to ephemeral trial
+containers; it is deliberately NOT applied to the operator's long-lived
+agent-box, whose scope stays enforced at the command layer.
+
+Resistance to agent modification. The trial container itself runs WITHOUT
+NET_ADMIN, so the agent inside it cannot flush or relax its own egress rules.
+The rules are installed by an ephemeral SIBLING container that joins the trial
+container's network namespace (`--network=container:<trial>`), holds NET_ADMIN
+just long enough to write the ruleset, and then exits. nftables/iptables state
+is per-netns, so the rules persist after the sibling is gone while the trial
+container, lacking the capability, cannot alter them. (The earlier design gave
+the trial container NET_ADMIN directly, which left the agent able to tear down
+the firewall; this sibling model closes that gap.)
 
 Wildcard allowlist entries ('*.example.com') cannot be pre-resolved to a fixed
 IP set and are reported separately for future proxy-based handling; a trial
@@ -86,6 +95,20 @@ def build_iptables_script(ips, *, allow_dns=True):
     return " ; ".join(c + c6)
 
 
+def sibling_nft_command(container, image, *, docker="docker"):
+    """Command that applies the nftables ruleset (fed on stdin) from an ephemeral
+    sibling that shares `container`'s network namespace and holds NET_ADMIN, then
+    exits. `container` itself has no NET_ADMIN, so the agent cannot alter the rules."""
+    return [docker, "run", "--rm", "-i", "--cap-add=NET_ADMIN",
+            f"--network=container:{container}", image, "nft", "-f", "-"]
+
+
+def sibling_iptables_command(container, image, script, *, docker="docker"):
+    """iptables fallback, same sibling model as sibling_nft_command."""
+    return [docker, "run", "--rm", "--cap-add=NET_ADMIN",
+            f"--network=container:{container}", image, "sh", "-lc", script]
+
+
 def _resolve_in_container(container, allowed_hosts, docker="docker"):
     """Resolve names from INSIDE the container so Docker-internal names (e.g.
     host.docker.internal) map to the right gateway IP."""
@@ -121,19 +144,25 @@ def _resolve_in_container(container, allowed_hosts, docker="docker"):
     return {"ips": sorted(ips), "wildcards": wildcards, "unresolved": unresolved}
 
 
-def apply_egress_firewall(container, allowed_hosts, *, docker="docker"):
-    """Install the default-drop egress firewall inside `container`, which must
-    run with --cap-add=NET_ADMIN. Tries nftables, falls back to iptables.
-    Returns (resolved_dict, backend_name)."""
+def apply_egress_firewall(container, allowed_hosts, *, docker="docker", image=None):
+    """Install the default-drop egress firewall on `container`'s network namespace
+    from an ephemeral NET_ADMIN sibling (see module docstring). `container` runs
+    WITHOUT NET_ADMIN; `image` is the firewall-capable image (nftables/iptables
+    installed) the sibling runs - normally the same toolbox image as the trial.
+    Tries nftables, falls back to iptables. Returns (resolved_dict, backend_name)."""
+    if not image:
+        raise ValueError(
+            "apply_egress_firewall requires `image`: the firewall is applied from a "
+            "sibling container so the trial container needs no NET_ADMIN of its own.")
     resolved = _resolve_in_container(container, allowed_hosts, docker=docker)
     ruleset = build_nft_ruleset(resolved["ips"])
-    p = subprocess.run([docker, "exec", "-i", container, "nft", "-f", "-"],
-                       input=ruleset, capture_output=True, text=True, timeout=30)
+    p = subprocess.run(sibling_nft_command(container, image, docker=docker),
+                       input=ruleset, capture_output=True, text=True, timeout=60)
     if p.returncode == 0:
         return resolved, "nft"
     script = build_iptables_script(resolved["ips"])
-    p2 = subprocess.run([docker, "exec", container, "sh", "-lc", script],
-                        capture_output=True, text=True, timeout=30)
+    p2 = subprocess.run(sibling_iptables_command(container, image, script, docker=docker),
+                        capture_output=True, text=True, timeout=60)
     if p2.returncode == 0:
         return resolved, "iptables"
     raise RuntimeError(
