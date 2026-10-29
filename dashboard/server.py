@@ -19,8 +19,10 @@ sys.path.insert(0, str(ROOT))  # so we can import agent.* when run as a script
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
+from agent import storyboard
 from agent.adapters import github_engagement_name
 from agent.findings import load_findings
+from agent.learn import _events_path
 from eval import report as eval_report
 from eval import store as eval_store
 
@@ -205,6 +207,59 @@ def api_findings(sid: str):
     if not audit or "findings" not in audit:
         return JSONResponse([])
     return JSONResponse(load_findings((ROOT / "workspace" / audit["findings"]).parent))
+
+
+# ---------------- attack-map storyboard (animated, plain-English replay) ----------------
+
+def _sb_path(sid: str):
+    """storyboard.json lives next to events.json (handles run_NN/ subdirs)."""
+    try:
+        return _events_path(_sdir(sid)).parent / "storyboard.json"
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="no events for this session")
+
+
+@app.get("/api/sessions/{sid:path}/storyboard")
+def api_storyboard(sid: str):
+    """Return the cached storyboard if it exists. Does NOT generate (no LLM, no cost)."""
+    p = _sb_path(sid)
+    if p.is_file():
+        return JSONResponse({"generated": True, "storyboard": json.loads(p.read_text(encoding="utf-8"))})
+    return JSONResponse({"generated": False})
+
+
+@app.post("/api/sessions/{sid:path}/storyboard")
+async def api_generate_storyboard(sid: str, req: Request):
+    """Generate (or force-regenerate) the storyboard. This makes ONE LLM call and
+    costs money; it only runs on explicit request. Localhost, single operator."""
+    _sb_path(sid)  # validates the session exists
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    force = bool((body or {}).get("force"))
+    try:
+        r = storyboard.build_storyboard(_sdir(sid), force=force)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"storyboard generation failed: {e}")
+    return {"generated": True, "cached": r["cached"], "cost_usd": r["cost_usd"],
+            "storyboard": r["storyboard"]}
+
+
+@app.get("/api/sessions/{sid:path}/replay")
+def api_replay(sid: str, download: int = 0):
+    """Self-contained animated player with the storyboard inlined. Iframed by the
+    dashboard and saved verbatim as the shareable export (?download=1)."""
+    p = _sb_path(sid)
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail="no storyboard yet - generate it first")
+    sb = json.loads(p.read_text(encoding="utf-8"))
+    html = storyboard.render_html(sb)
+    headers = {}
+    if download:
+        fname = sid.replace("/", "-").replace("\\", "-") + "-attack-map.html"
+        headers["Content-Disposition"] = f'attachment; filename="{fname}"'
+    return HTMLResponse(html, headers=headers)
 
 
 # ---------------- evaluation subsystem views (read-only over eval/results.sqlite) ----------------

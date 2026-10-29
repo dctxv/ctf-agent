@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attack Map</title>
+<style>
+  :root {
+    --bg:#0a0d12; --surface:#0f141b; --surface-2:#0c1016; --raised:#141a22;
+    --border:#1c242e; --border-soft:#161d26; --text:#e6edf3; --dim:#96a3b2; --faint:#5c6b7a;
+    --accent:#5b9dff; --green:#4bb86a; --amber:#e0a23c; --red:#ec6a6a; --purple:#b98cff; --cyan:#43c6c0;
+    --recon:#5b9dff; --discovery:#43c6c0; --exploit:#e0a23c; --exfil:#ec6a6a; --report:#b98cff;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html,body { height:100%; }
+  body { margin:0; font-family:var(--sans); background:var(--bg); color:var(--text);
+    display:flex; flex-direction:column; height:100vh; overflow:hidden; font-size:14px; -webkit-font-smoothing:antialiased; }
+
+  header.top { display:flex; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid var(--border);
+    background:var(--surface); flex-wrap:wrap; }
+  header .ttl { font-weight:650; font-size:15px; }
+  header .sub { color:var(--dim); font-size:12.5px; margin-top:1px; }
+  header .spacer { flex:1; }
+  .badge { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:4px 10px;
+    border-radius:20px; border:1px solid transparent; white-space:nowrap; }
+  .b-success { color:var(--green); background:rgba(75,184,106,.12); border-color:rgba(75,184,106,.3); }
+  .b-partial { color:var(--amber); background:rgba(224,162,60,.12); border-color:rgba(224,162,60,.3); }
+  .b-failed  { color:var(--red);   background:rgba(236,106,106,.12); border-color:rgba(236,106,106,.3); }
+  .stats { display:flex; gap:16px; color:var(--dim); font-size:12px; }
+  .stats b { color:var(--text); font-weight:600; }
+
+  .tldr { padding:10px 18px; color:var(--text); font-size:13.5px; line-height:1.5; background:var(--surface-2);
+    border-bottom:1px solid var(--border-soft); }
+  .tldr span { color:var(--faint); font-weight:600; text-transform:uppercase; font-size:10.5px; letter-spacing:.5px; margin-right:8px; }
+
+  .stage { flex:1; overflow:auto; background:
+    radial-gradient(circle at 1px 1px, #141b24 1px, transparent 0) 0 0/22px 22px, var(--surface-2); min-height:0; }
+  svg#graph { display:block; width:100%; height:100%; }
+
+  .node rect { fill:var(--raised); stroke:var(--border); stroke-width:1.5; rx:9; transition:stroke .3s; }
+  .node text { fill:var(--text); font-family:var(--sans); font-size:12.5px; }
+  .node .kind { fill:var(--faint); font-size:9.5px; text-transform:uppercase; letter-spacing:.6px; }
+  .node { opacity:.26; transition:opacity .45s; }   /* ghosted until reached, so the map shape shows */
+  .node.reached { opacity:1; }
+  .node.active rect { stroke-width:2.5; filter:drop-shadow(0 0 8px currentColor); }
+  .node.k-attacker rect { fill:#161d26; stroke:#394a5a; }
+  .node.p-recon.active rect { stroke:var(--recon); color:var(--recon); }
+  .node.p-discovery.active rect { stroke:var(--discovery); color:var(--discovery); }
+  .node.p-exploit.active rect { stroke:var(--exploit); color:var(--exploit); }
+  .node.p-exfil.active rect { stroke:var(--exfil); color:var(--exfil); }
+  .node.p-report.active rect { stroke:var(--report); color:var(--report); }
+  .node .dot { } /* phase dot */
+
+  path.edge { fill:none; stroke:#2a3744; stroke-width:2; opacity:0; transition:opacity .4s; }
+  path.edge.on { opacity:.9; }
+  path.edge.active { stroke-width:3; stroke-dasharray:7 7; animation:flow .7s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset:-14; } }
+  path.edge.active.p-recon { stroke:var(--recon); } path.edge.active.p-discovery { stroke:var(--discovery); }
+  path.edge.active.p-exploit { stroke:var(--exploit); } path.edge.active.p-exfil { stroke:var(--exfil); }
+  path.edge.active.p-report { stroke:var(--report); }
+
+  .legend { display:flex; gap:14px; padding:7px 18px; border-top:1px solid var(--border-soft); background:var(--surface);
+    font-size:11px; color:var(--dim); flex-wrap:wrap; }
+  .legend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+
+  .narr { padding:14px 18px; background:var(--surface); border-top:1px solid var(--border); }
+  .narr .row { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .phasechip { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:3px 9px; border-radius:20px; }
+  .stepno { color:var(--faint); font-size:12px; }
+  .narr h2 { margin:2px 0 4px; font-size:16px; }
+  .narr p { margin:0; color:var(--text); font-size:14px; line-height:1.55; }
+  details.cmd { margin-top:9px; }
+  details.cmd summary { cursor:pointer; color:var(--dim); font-size:12px; user-select:none; }
+  details.cmd summary:hover { color:var(--text); }
+  details.cmd pre { margin:7px 0 0; padding:10px 12px; background:var(--surface-2); border:1px solid var(--border-soft);
+    border-radius:8px; color:#cfe3f0; font-family:var(--mono); font-size:11.5px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
+
+  .transport { display:flex; align-items:center; gap:10px; padding:10px 18px; border-top:1px solid var(--border-soft);
+    background:var(--surface); }
+  .tbtn { width:34px; height:34px; display:grid; place-items:center; border:1px solid var(--border); background:var(--raised);
+    color:var(--text); border-radius:8px; cursor:pointer; font-size:14px; }
+  .tbtn:hover { border-color:#2a3744; background:#19212a; }
+  .tbtn.play { width:auto; padding:0 15px; gap:7px; font-weight:600; }
+  #scrub { flex:1; accent-color:var(--accent); cursor:pointer; }
+  .speed { color:var(--dim); font-size:12px; cursor:pointer; padding:5px 9px; border:1px solid var(--border);
+    border-radius:8px; background:var(--raised); }
+
+  .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--faint); }
+
+  @media (max-width:640px) {
+    header.top { gap:8px; } .stats { order:3; width:100%; }
+    .narr h2 { font-size:15px; }
+  }
+</style>
+</head>
+<body>
+  <div id="app" hidden>
+    <header class="top">
+      <div>
+        <div class="ttl" id="title"></div>
+        <div class="sub" id="subtitle"></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="stats" id="stats"></div>
+      <span class="badge" id="outcome"></span>
+    </header>
+    <div class="tldr"><span>How it broke in</span><span id="tldr" style="color:var(--text);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+    <div class="stage"><svg id="graph" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="legend" id="legend"></div>
+    <div class="narr">
+      <div class="row"><span class="phasechip" id="phasechip"></span><span class="stepno" id="stepno"></span></div>
+      <h2 id="headline"></h2>
+      <p id="say"></p>
+      <details class="cmd" id="cmdwrap"><summary>Show the real command</summary><pre id="cmd"></pre></details>
+    </div>
+    <div class="transport">
+      <button class="tbtn" id="restart" title="Restart">&#x21bb;</button>
+      <button class="tbtn" id="prev" title="Previous">&#x25c0;</button>
+      <button class="tbtn play" id="play" title="Play/Pause"><span id="playicon">&#9654;</span><span id="playlabel">Play</span></button>
+      <button class="tbtn" id="next" title="Next">&#x25b6;</button>
+      <input type="range" id="scrub" min="0" max="0" value="0">
+      <span class="speed" id="speed">1&times;</span>
+    </div>
+  </div>
+  <div id="noemb" class="empty" hidden>
+    <div style="font-size:30px">&#9888;</div>
+    <div>No storyboard to display.</div>
+  </div>
+
+<script id="sb" type="application/json">__STORYBOARD__</script>
+<script>
+const PHASES = ["recon","discovery","exploit","exfil","report"];
+const PHASE_COLOR = {recon:"var(--recon)",discovery:"var(--discovery)",exploit:"var(--exploit)",exfil:"var(--exfil)",report:"var(--report)"};
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function loadStoryboard() {
+  try {
+    const raw = document.getElementById("sb").textContent;
+    const sb = JSON.parse(raw);
+    if (!sb || !Array.isArray(sb.steps) || !sb.steps.length) return null;
+    return sb;
+  } catch (e) { return null; }
+}
+
+const SB = loadStoryboard();
+if (!SB) {
+  document.getElementById("noemb").hidden = false;
+} else {
+  document.getElementById("app").hidden = false;
+  boot(SB);
+}
+
+function esc(s) { return String(s==null?"":s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function boot(sb) {
+  // ---- header ----
+  document.getElementById("title").textContent = sb.title || sb.session || "Attack map";
+  document.getElementById("subtitle").textContent = sb.subtitle || sb.target || "";
+  document.getElementById("tldr").textContent = sb.tldr || "";
+  const oc = (sb.outcome || "partial").toLowerCase();
+  const ob = document.getElementById("outcome");
+  ob.textContent = oc; ob.className = "badge b-" + (["success","partial","failed"].includes(oc) ? oc : "partial");
+  const s = sb.stats || {};
+  document.getElementById("stats").innerHTML =
+    `<span><b>${s.steps||sb.steps.length}</b> steps</span>` +
+    (s.findings ? `<span><b>${s.findings}</b> findings</span>` : "") +
+    (s.cost_usd!=null ? `<span><b>$${s.cost_usd}</b></span>` : "") +
+    (s.duration_s ? `<span><b>${s.duration_s}s</b></span>` : "");
+
+  // ---- legend ----
+  const phasesPresent = (sb.phases && sb.phases.length) ? sb.phases : PHASES.filter(p => sb.nodes.some(n=>n.phase===p));
+  document.getElementById("legend").innerHTML = phasesPresent.map(p =>
+    `<span><i style="background:${PHASE_COLOR[p]}"></i>${p}</span>`).join("");
+
+  // ---- layout: attacker/null-phase column first, then one column per phase present ----
+  const cols = ["_start", ...phasesPresent];
+  const colIndex = {}; cols.forEach((c,i)=>colIndex[c]=i);
+  const colOf = n => (n.phase && colIndex[n.phase]!=null) ? colIndex[n.phase] : 0;
+  const byCol = {}; sb.nodes.forEach(n => { const c=colOf(n); (byCol[c]=byCol[c]||[]).push(n); });
+
+  const NW=172, NH=50, COLGAP=250, ROWGAP=80, MX=32, MY=34;
+  const pos = {};
+  let maxRows = 0;
+  for (const c in byCol) maxRows = Math.max(maxRows, byCol[c].length);
+  Object.keys(byCol).forEach(c => {
+    const list = byCol[c]; const ci = +c;
+    list.forEach((n,ri) => {
+      // vertically center each column's nodes within the tallest column
+      const offset = (maxRows - list.length) * ROWGAP / 2;
+      pos[n.id] = { x: MX + ci*COLGAP, y: MY + offset + ri*ROWGAP, w:NW, h:NH };
+    });
+  });
+  const W = MX*2 + (cols.length-1)*COLGAP + NW;
+  const H = MY*2 + Math.max(1,maxRows)*ROWGAP;
+  const svg = document.getElementById("graph");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);   // width:100% + meet -> whole map scales to fit the stage
+
+  // ---- build edges (unique from steps) ----
+  const edgeList = []; const edgeKey = {};
+  sb.steps.forEach(st => {
+    if (st.edge && st.edge.length===2 && pos[st.edge[0]] && pos[st.edge[1]]) {
+      const k = st.edge[0]+">"+st.edge[1];
+      if (!(k in edgeKey)) { edgeKey[k] = edgeList.length; edgeList.push({from:st.edge[0], to:st.edge[1], phase:st.phase, k}); }
+    }
+  });
+
+  function edgePath(a,b) {
+    const p1 = pos[a], p2 = pos[b];
+    const x1 = p1.x + p1.w, y1 = p1.y + p1.h/2;
+    const x2 = p2.x,        y2 = p2.y + p2.h/2;
+    const dx = Math.max(40, (x2-x1)/2);
+    return `M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`;
+  }
+
+  // edges first (under nodes)
+  const edgeEls = {};
+  edgeList.forEach(e => {
+    const path = document.createElementNS(SVGNS,"path");
+    path.setAttribute("d", edgePath(e.from,e.to));
+    path.setAttribute("class","edge");
+    path.dataset.key = e.k;
+    svg.appendChild(path);
+    edgeEls[e.k] = path;
+  });
+
+  // nodes
+  const nodeEls = {};
+  sb.nodes.forEach(n => {
+    const p = pos[n.id]; if (!p) return;
+    const g = document.createElementNS(SVGNS,"g");
+    g.setAttribute("class", `node k-${n.kind||"node"} p-${n.phase||"none"}`);
+    g.setAttribute("transform", `translate(${p.x},${p.y})`);
+    const rect = document.createElementNS(SVGNS,"rect");
+    rect.setAttribute("width",p.w); rect.setAttribute("height",p.h); rect.setAttribute("rx",9);
+    g.appendChild(rect);
+    if (n.phase) {
+      const dot = document.createElementNS(SVGNS,"circle");
+      dot.setAttribute("cx",13); dot.setAttribute("cy",p.h/2); dot.setAttribute("r",4);
+      dot.setAttribute("fill", PHASE_COLOR[n.phase]||"var(--faint)");
+      g.appendChild(dot);
+    }
+    const kind = document.createElementNS(SVGNS,"text");
+    kind.setAttribute("class","kind"); kind.setAttribute("x", n.phase?24:12); kind.setAttribute("y",17);
+    kind.textContent = (n.kind||"").toUpperCase() + (n.severity?(" · "+n.severity):"");
+    g.appendChild(kind);
+    const label = document.createElementNS(SVGNS,"text");
+    label.setAttribute("x", n.phase?24:12); label.setAttribute("y",35);
+    const full = n.label||n.id;
+    label.textContent = full.length>24 ? full.slice(0,23)+"…" : full;
+    g.appendChild(label);
+    const title = document.createElementNS(SVGNS,"title"); title.textContent = full; g.appendChild(title);
+    svg.appendChild(g);
+    nodeEls[n.id] = g;
+  });
+
+  // ---- animation state ----
+  let cur = -1, playing = false, timer = null, speed = 1;
+  const SPEEDS = [1,1.5,2,0.5];
+  const scrub = document.getElementById("scrub");
+  scrub.max = sb.steps.length; scrub.value = 0;
+
+  function visibleUpTo(k) {
+    const nodes = new Set(), edges = new Set();
+    for (let i=0;i<=k && i<sb.steps.length;i++) {
+      const st = sb.steps[i];
+      if (st.node) nodes.add(st.node);
+      if (st.edge) { nodes.add(st.edge[0]); nodes.add(st.edge[1]); edges.add(st.edge[0]+">"+st.edge[1]); }
+    }
+    return {nodes, edges};
+  }
+
+  function render() {
+    const {nodes, edges} = visibleUpTo(cur);
+    for (const id in nodeEls) nodeEls[id].classList.toggle("reached", nodes.has(id));
+    for (const k in edgeEls) { edgeEls[k].classList.toggle("on", edges.has(k)); edgeEls[k].className.baseVal = edgeEls[k].className.baseVal.replace(/ active.*$/,""); }
+    // clear active node
+    for (const id in nodeEls) nodeEls[id].classList.remove("active");
+
+    const st = cur>=0 ? sb.steps[cur] : null;
+    const chip = document.getElementById("phasechip");
+    if (st) {
+      if (st.node && nodeEls[st.node]) nodeEls[st.node].classList.add("active");
+      if (st.edge) { const k=st.edge[0]+">"+st.edge[1]; if (edgeEls[k]) edgeEls[k].setAttribute("class",`edge on active p-${st.phase||""}`); }
+      chip.textContent = st.phase || ""; chip.style.color = PHASE_COLOR[st.phase]||"var(--dim)";
+      chip.style.background = "rgba(255,255,255,.05)";
+      document.getElementById("stepno").textContent = `Step ${cur+1} of ${sb.steps.length}`;
+      document.getElementById("headline").textContent = st.headline || "";
+      document.getElementById("say").textContent = st.say || "";
+      const cw = document.getElementById("cmdwrap");
+      if (st.command) { cw.hidden=false; document.getElementById("cmd").textContent = st.command; }
+      else cw.hidden = true;
+      // scroll active node into view
+      if (st.node && nodeEls[st.node]) nodeEls[st.node].scrollIntoView({behavior:"smooth",block:"nearest",inline:"nearest"});
+    } else {
+      chip.textContent=""; document.getElementById("stepno").textContent = `${sb.steps.length} steps`;
+      document.getElementById("headline").textContent = "Ready to replay";
+      document.getElementById("say").textContent = "Press Play to watch how the agent broke in, step by step.";
+      document.getElementById("cmdwrap").hidden = true;
+    }
+    scrub.value = cur+1;
+  }
+
+  function go(k) { cur = Math.max(-1, Math.min(sb.steps.length-1, k)); render(); if (cur>=sb.steps.length-1) pause(); }
+  function step(d) { go(cur+d); }
+
+  function play() {
+    if (cur>=sb.steps.length-1) cur=-1;
+    playing=true; setPlayUI();
+    clearInterval(timer);
+    timer = setInterval(()=>{ if (cur>=sb.steps.length-1) { pause(); return; } go(cur+1); }, 2400/speed);
+    if (cur<0) go(0);
+  }
+  function pause() { playing=false; clearInterval(timer); setPlayUI(); }
+  function setPlayUI() {
+    document.getElementById("playicon").innerHTML = playing ? "&#10073;&#10073;" : "&#9654;";
+    document.getElementById("playlabel").textContent = playing ? "Pause" : "Play";
+  }
+
+  document.getElementById("play").onclick = () => playing ? pause() : play();
+  document.getElementById("next").onclick = () => { pause(); step(1); };
+  document.getElementById("prev").onclick = () => { pause(); step(-1); };
+  document.getElementById("restart").onclick = () => { pause(); go(-1); };
+  scrub.oninput = () => { pause(); go((+scrub.value)-1); };
+  document.getElementById("speed").onclick = () => {
+    speed = SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length];
+    document.getElementById("speed").innerHTML = speed+"&times;";
+    if (playing) play();
+  };
+  document.addEventListener("keydown", e => {
+    if (e.key===" ") { e.preventDefault(); playing?pause():play(); }
+    else if (e.key==="ArrowRight") { pause(); step(1); }
+    else if (e.key==="ArrowLeft") { pause(); step(-1); }
+  });
+
+  render();
+}
+</script>
+</body>
+</html>
