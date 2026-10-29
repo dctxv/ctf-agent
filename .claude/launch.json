@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["dashboard/server.py"],
       "port": 8900
+    },
+    {
+      "name": "career-hub-client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "workspace/targets/dch-live/client", "run", "dev"],
+      "port": 5173
     }
   ]
 }
